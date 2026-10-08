@@ -17,12 +17,12 @@ const BalanceCard = styled.section`
   small { font-size: 14px; opacity: .95; }
 `
 
-const Actions = styled.div`
+const Actions = styled.div<{ $single?: boolean }>`
   display: grid;
   grid-template-columns: 1fr;
   gap: 10px;
   margin-top: 20px;
-  ${mq.sm} { grid-template-columns: repeat(2, 1fr); }
+  ${mq.sm} { grid-template-columns: ${({ $single }) => ($single ? '1fr' : 'repeat(2, 1fr)')}; }
   button { background: ${({ theme }) => theme.colors.white}; color: ${({ theme }) => theme.colors.primaryText}; }
   button:hover:not(:disabled) { background: ${({ theme }) => theme.colors.primarySoft}; }
   button.alt { background: transparent; color: ${({ theme }) => theme.colors.white}; border-color: ${({ theme }) => theme.colors.white}; }
@@ -77,7 +77,7 @@ export default function Wallet() {
           <span>Saldo disponível</span>
           <strong>{formatFt(user.balanceFt)}</strong>
           <small>≈ {formatBRL(ftToBrl(user.balanceFt))} · R$ 1,00 = 30 ft</small>
-          <Actions>
+          <Actions $single={!isCreator}>
             <Button $block onClick={() => navigate('/conta/carteira/recarregar')}>
               <Plus size={18} strokeWidth={2.6} /> Recarregar
             </Button>

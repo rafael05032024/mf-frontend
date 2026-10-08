@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Image, Video } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
@@ -6,7 +6,20 @@ import { mq } from '../styles/theme'
 import type { Profile } from '../types'
 import { Avatar } from './Avatar'
 import { VerifiedBadge } from './icons'
-import { IconButton, Row, SectionTitle } from './ui'
+import { IconButton, SectionTitle } from './ui'
+
+// equivalente ao `ease-in-out` do CSS: cubic-bezier(0.42, 0, 0.58, 1)
+function easeInOut(x: number) {
+  const bez = (a: number, b: number, u: number) => 3 * a * u * (1 - u) ** 2 + 3 * b * u ** 2 * (1 - u) + u ** 3
+  let lo = 0
+  let hi = 1
+  for (let i = 0; i < 20; i++) {
+    const mid = (lo + hi) / 2
+    if (bez(0.42, 0.58, mid) < x) lo = mid
+    else hi = mid
+  }
+  return bez(0, 1, (lo + hi) / 2)
+}
 
 const Track = styled.ul`
   list-style: none;
@@ -19,7 +32,6 @@ const Track = styled.ul`
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scroll-padding: 0 16px;
-  scroll-behavior: smooth;
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
   ${mq.sm} { grid-auto-columns: 46%; }
@@ -59,25 +71,72 @@ const Info = styled.div`
   small span { display: inline-flex; align-items: center; gap: 4px; }
 `
 
-const Controls = styled.div`
+const Wrap = styled.div`
+  position: relative;
+`
+
+const NavButton = styled(IconButton)<{ $side: 'left' | 'right' }>`
   display: none;
-  ${mq.md} { display: flex; gap: 4px; }
-  button { border: 1px solid ${({ theme }) => theme.colors.border}; background: ${({ theme }) => theme.colors.white}; }
+  ${mq.md} {
+    display: inline-flex;
+    position: absolute;
+    z-index: 2;
+    top: 50%;
+    ${({ $side }) => ($side === 'left' ? 'left: 8px;' : 'right: 8px;')}
+    transform: translateY(-50%);
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    background: ${({ theme }) => theme.colors.white};
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  }
 `
 
 export function FeaturedCarousel({ profiles }: { profiles: Profile[] }) {
   const ref = useRef<HTMLUListElement>(null)
-  const scroll = (dir: 1 | -1) => ref.current?.scrollBy({ left: dir * ref.current.clientWidth * 0.9 })
+  const raf = useRef(0)
+
+  const animateTo = (target: number) => {
+    const el = ref.current
+    if (!el) return
+    cancelAnimationFrame(raf.current)
+    const from = el.scrollLeft
+    const dist = target - from
+    const duration = Math.min(2800, Math.max(1800, Math.abs(dist) * 2.2))
+    const start = performance.now()
+    // snap e smooth nativos brigam com a animação manual
+    el.style.scrollSnapType = 'none'
+    el.style.scrollBehavior = 'auto'
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration)
+      const ease = easeInOut(t)
+      el.scrollLeft = from + dist * ease
+      if (t < 1) raf.current = requestAnimationFrame(step)
+      else {
+        el.style.scrollSnapType = ''
+        el.style.scrollBehavior = ''
+      }
+    }
+    raf.current = requestAnimationFrame(step)
+  }
+
+  const scroll = (dir: 1 | -1) => {
+    const el = ref.current
+    if (!el) return
+    const max = el.scrollWidth - el.clientWidth
+    const atEnd = el.scrollLeft >= max - 4
+    const atStart = el.scrollLeft <= 4
+    if (dir === 1 && atEnd) animateTo(0)
+    else if (dir === -1 && atStart) animateTo(max)
+    else animateTo(Math.min(max, Math.max(0, el.scrollLeft + dir * el.clientWidth * 0.9)))
+  }
+
+  useEffect(() => () => cancelAnimationFrame(raf.current), [])
 
   return (
     <section aria-roledescription="carrossel" aria-label="Perfis em destaque">
-      <Row $between style={{ marginBottom: 12 }}>
-        <SectionTitle>Em destaque</SectionTitle>
-        <Controls>
-          <IconButton onClick={() => scroll(-1)} aria-label="Destaques anteriores"><ChevronLeft size={20} /></IconButton>
-          <IconButton onClick={() => scroll(1)} aria-label="Próximos destaques"><ChevronRight size={20} /></IconButton>
-        </Controls>
-      </Row>
+      <SectionTitle style={{ marginBottom: 12 }}>Em destaque</SectionTitle>
+      <Wrap>
+        <NavButton $side="left" onClick={() => scroll(-1)} aria-label="Destaques anteriores"><ChevronLeft size={20} /></NavButton>
+        <NavButton $side="right" onClick={() => scroll(1)} aria-label="Próximos destaques"><ChevronRight size={20} /></NavButton>
       <Track ref={ref}>
         {profiles.map((p, i) => {
           const photos = p.media.filter(m => m.type === 'photo').length
@@ -103,6 +162,7 @@ export function FeaturedCarousel({ profiles }: { profiles: Profile[] }) {
           )
         })}
       </Track>
+      </Wrap>
     </section>
   )
 }

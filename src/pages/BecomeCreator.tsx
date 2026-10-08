@@ -3,12 +3,13 @@ import { AtSign, ShieldCheck } from 'lucide-react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { AmountPicker, parseBRL, validateBRL } from '../components/AmountPicker'
+import { EmojiTextarea } from '../components/EmojiTextarea'
 import { Field } from '../components/Field'
 import { InstagramIcon, TikTokIcon } from '../components/icons'
 import { ImageUpload } from '../components/ImageUpload'
 import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
-import { Alert, Button, Card, Input, Muted, NarrowContainer, Select, Stack, Textarea } from '../components/ui'
+import { Alert, Button, Card, Input, Muted, NarrowContainer, Select, Stack } from '../components/ui'
 import { useApp, useAuthedUser } from '../store/AppContext'
 import { mq } from '../styles/theme'
 import { ageFrom, brlToFt, formatFt, HANDLE_RE, isValidCPF, maskCPF, normalizeHandle } from '../utils/format'
@@ -264,10 +265,10 @@ export default function BecomeCreator() {
             <>
               <ImageUpload label="Foto de capa" shape="cover" value={form.cover} onChange={v => set('cover', v)} error={errors.cover} hint="Enviar capa (proporção 3:1)" />
               <Field label="Biografia" error={errors.bio} hint={`${form.bio.length}/500`}>
-                <Textarea
+                <EmojiTextarea
                   value={form.bio}
                   maxLength={500}
-                  onChange={e => set('bio', e.target.value)}
+                  onChange={v => set('bio', v)}
                   placeholder="Conte o que seus assinantes vão encontrar por aqui…"
                 />
               </Field>

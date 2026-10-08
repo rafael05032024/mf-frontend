@@ -1,12 +1,13 @@
 import { useState, type FormEvent } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { EmojiTextarea } from '../components/EmojiTextarea'
 import { Field } from '../components/Field'
 import { ImageUpload } from '../components/ImageUpload'
 import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 import styled from 'styled-components'
-import { Alert, Button, Card, Input, NarrowContainer, Stack, Textarea } from '../components/ui'
+import { Alert, Button, Card, Input, NarrowContainer, Stack } from '../components/ui'
 import { useApp, useAuthedUser } from '../store/AppContext'
 import { formatBRL, formatDate, HANDLE_RE, normalizeHandle } from '../utils/format'
 
@@ -97,7 +98,7 @@ export default function EditProfile() {
               </Field>
               {isCreator && (
                 <Field label="Biografia" error={errors.bio} hint={`${form.bio.length}/500`}>
-                  <Textarea value={form.bio} maxLength={500} onChange={e => setForm(f => ({ ...f, bio: e.target.value }))} />
+                  <EmojiTextarea value={form.bio} maxLength={500} onChange={bio => setForm(f => ({ ...f, bio }))} />
                 </Field>
               )}
               {readonly.map(([label, value]) => (

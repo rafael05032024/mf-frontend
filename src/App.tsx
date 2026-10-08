@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { CreatorOnly, GuestOnly, ProtectedLayout, PublicLayout } from './components/Layout'
+import { PageLoader } from './components/PageLoader'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -19,7 +20,7 @@ const Post = lazy(() => import('./pages/Post'))
 export default function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={null}>
+      <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route element={<GuestOnly />}>
             <Route path="/login" element={<Login />} />

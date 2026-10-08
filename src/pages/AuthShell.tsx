@@ -5,7 +5,7 @@ import { LogoMark } from '../components/icons'
 import { mq } from '../styles/theme'
 
 const Page = styled.div`
-  min-height: 100dvh;
+  min-height: calc(100dvh / var(--ui-zoom, 1));
   display: grid;
   background: ${({ theme }) => theme.colors.white};
   ${mq.md} { grid-template-columns: 1fr 1fr; }

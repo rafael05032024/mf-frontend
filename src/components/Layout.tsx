@@ -1,6 +1,9 @@
+import { Suspense } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { Header } from './Header'
+import { PageLoader } from './PageLoader'
+import { RouteTransition } from './RouteTransition'
 
 export function ProtectedLayout() {
   const { user } = useApp()
@@ -9,7 +12,11 @@ export function ProtectedLayout() {
   return (
     <>
       <Header />
-      <Outlet />
+      <RouteTransition>
+        <Suspense fallback={<PageLoader />}>
+          <Outlet />
+        </Suspense>
+      </RouteTransition>
     </>
   )
 }
@@ -18,7 +25,11 @@ export function PublicLayout() {
   return (
     <>
       <Header />
-      <Outlet />
+      <RouteTransition>
+        <Suspense fallback={<PageLoader />}>
+          <Outlet />
+        </Suspense>
+      </RouteTransition>
     </>
   )
 }
