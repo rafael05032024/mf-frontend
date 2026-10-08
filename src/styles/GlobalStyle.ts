@@ -21,6 +21,7 @@ export const GlobalStyle = createGlobalStyle`
   button { cursor: pointer; }
   a { color: ${({ theme }) => theme.colors.primaryText}; text-decoration: none; }
   h1, h2, h3, h4, p { margin: 0; }
+  h1, h2, h3, h4 { font-family: ${({ theme }) => theme.fontDisplay}; }
   :focus-visible {
     outline: 3px solid ${({ theme }) => theme.colors.primary};
     outline-offset: 2px;

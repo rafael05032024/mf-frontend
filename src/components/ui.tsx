@@ -144,7 +144,6 @@ const fieldBase = css`
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.colors.primary};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primarySoft};
   }
   &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.danger}; }
   &:read-only:not(select) {
