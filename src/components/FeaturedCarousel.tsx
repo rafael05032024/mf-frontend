@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
-import { ChevronLeft, ChevronRight, Image, Video } from 'lucide-react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 import { mq } from '../styles/theme'
-import type { Profile } from '../types'
+import type { ProfileSummary } from '../api'
 import { Avatar } from './Avatar'
 import { VerifiedBadge } from './icons'
 import { IconButton, SectionTitle } from './ui'
@@ -67,8 +67,6 @@ const Info = styled.div`
   align-items: center;
   gap: 10px;
   strong { display: flex; align-items: center; gap: 4px; font-size: 16px; }
-  small { display: flex; gap: 10px; font-size: 13px; opacity: 0.92; margin-top: 2px; }
-  small span { display: inline-flex; align-items: center; gap: 4px; }
 `
 
 const Wrap = styled.div`
@@ -90,7 +88,7 @@ const NavButton = styled(IconButton)<{ $side: 'left' | 'right' }>`
   }
 `
 
-export function FeaturedCarousel({ profiles }: { profiles: Profile[] }) {
+export function FeaturedCarousel({ profiles }: { profiles: ProfileSummary[] }) {
   const ref = useRef<HTMLUListElement>(null)
   const raf = useRef(0)
 
@@ -138,29 +136,21 @@ export function FeaturedCarousel({ profiles }: { profiles: Profile[] }) {
         <NavButton $side="left" onClick={() => scroll(-1)} aria-label="Destaques anteriores"><ChevronLeft size={20} /></NavButton>
         <NavButton $side="right" onClick={() => scroll(1)} aria-label="Próximos destaques"><ChevronRight size={20} /></NavButton>
       <Track ref={ref}>
-        {profiles.map((p, i) => {
-          const photos = p.media.filter(m => m.type === 'photo').length
-          const videos = p.media.length - photos
-          return (
-            <li key={p.id} aria-roledescription="slide" aria-label={`${i + 1} de ${profiles.length}`}>
-              <Slide to={`/perfil/${p.handle}`}>
-                <img src={p.media[0]?.url ?? p.cover} alt="" loading="lazy" />
-                <Info>
-                  <Avatar name={p.name} src={p.avatar} size={44} />
-                  <div>
-                    <strong>
-                      {p.name} {p.verified && <VerifiedBadge size={16} />}
-                    </strong>
-                    <small>
-                      <span><Image size={14} aria-hidden /> {photos}</span>
-                      <span><Video size={14} aria-hidden /> {videos}</span>
-                    </small>
-                  </div>
-                </Info>
-              </Slide>
-            </li>
-          )
-        })}
+        {profiles.map((p, i) => (
+          <li key={p.handle} aria-roledescription="slide" aria-label={`${i + 1} de ${profiles.length}`}>
+            <Slide to={`/perfil/${p.handle}`}>
+              {(p.cover ?? p.avatar) && <img src={p.cover ?? p.avatar} alt="" loading="lazy" />}
+              <Info>
+                <Avatar name={p.handle} src={p.avatar} size={44} />
+                <div>
+                  <strong>
+                    @{p.handle} {p.verified && <VerifiedBadge size={16} />}
+                  </strong>
+                </div>
+              </Info>
+            </Slide>
+          </li>
+        ))}
       </Track>
       </Wrap>
     </section>

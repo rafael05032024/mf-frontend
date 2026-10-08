@@ -1,6 +1,7 @@
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { Search, X } from 'lucide-react'
 import styled from 'styled-components'
+import { listProfiles, type ProfileSummary } from '../api'
 import { FeaturedCarousel } from '../components/FeaturedCarousel'
 import { ProfileCard } from '../components/ProfileCard'
 import { Container, IconButton, Muted, SectionTitle, Stack } from '../components/ui'
@@ -48,15 +49,27 @@ const EmptyState = styled.div`
 `
 
 export default function Home() {
-  const { profiles, user } = useApp()
+  const { user } = useApp()
+  const [profiles, setProfiles] = useState<ProfileSummary[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const deferred = useDeferredValue(query)
   const q = deferred.trim().toLowerCase().replace(/^@/, '')
 
-  const others = useMemo(() => profiles.filter(p => p.id !== user?.id), [profiles, user?.id])
-  const featured = useMemo(() => others.filter(p => p.featured), [others])
+  useEffect(() => {
+    let active = true
+    listProfiles()
+      .then(data => active && setProfiles(data))
+      .catch(e => active && setError(e instanceof Error ? e.message : 'Erro ao carregar perfis'))
+      .finally(() => active && setLoading(false))
+    return () => { active = false }
+  }, [user?.id]) // recarrega ao logar/deslogar (token muda)
+
+  const others = useMemo(() => profiles.filter(p => p.handle !== user?.handle), [profiles, user?.handle])
+  const featured = useMemo(() => others.filter(p => p.highlighted), [others])
   const results = useMemo(
-    () => (q ? others.filter(p => p.name.toLowerCase().includes(q) || p.handle.includes(q)) : others),
+    () => (q ? others.filter(p => p.handle.toLowerCase().includes(q)) : others),
     [others, q],
   )
   const searching = query.trim().length > 0
@@ -72,7 +85,7 @@ export default function Home() {
             type="search"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Buscar perfis por nome ou @perfil"
+            placeholder="Buscar perfis por @perfil"
             autoComplete="off"
             enterKeyHint="search"
           />
@@ -90,16 +103,23 @@ export default function Home() {
             {searching ? `Resultados para “${query.trim()}”` : 'Perfis'}
           </SectionTitle>
           <p className="sr-only" aria-live="polite">{results.length} perfis encontrados</p>
-          {results.length === 0 ? (
+          {loading ? (
+            <Muted>Carregando perfis…</Muted>
+          ) : error ? (
+            <EmptyState>
+              <strong>Não foi possível carregar os perfis</strong>
+              <Muted>{error}</Muted>
+            </EmptyState>
+          ) : results.length === 0 ? (
             <EmptyState>
               <Search size={32} aria-hidden />
               <strong>Nenhum perfil encontrado</strong>
-              <Muted>Tente buscar por outro nome ou @perfil.</Muted>
+              <Muted>Tente buscar por outro @perfil.</Muted>
             </EmptyState>
           ) : (
             <Grid>
               {results.map(p => (
-                <li key={p.id}><ProfileCard profile={p} /></li>
+                <li key={p.handle}><ProfileCard profile={p} /></li>
               ))}
             </Grid>
           )}

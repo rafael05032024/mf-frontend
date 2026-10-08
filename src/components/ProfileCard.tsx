@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
-import type { Profile } from '../types'
-import { brlToFt, formatFt } from '../utils/format'
+import type { ProfileSummary } from '../api'
 import { Avatar } from './Avatar'
 import { VerifiedBadge } from './icons'
 
@@ -51,34 +50,19 @@ export const HandleText = styled.span`
   white-space: nowrap;
 `
 
-const Price = styled.span`
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.primaryText};
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: ${({ theme }) => theme.shadow.sm};
-  padding: 4px 10px;
-  border-radius: ${({ theme }) => theme.radius.pill};
-`
-
-export function ProfileCard({ profile }: { profile: Profile }) {
+export function ProfileCard({ profile }: { profile: ProfileSummary }) {
   return (
     <CardLink to={`/perfil/${profile.handle}`}>
       <Cover>
-        <img src={profile.cover} alt="" loading="lazy" />
-        <Price>{formatFt(brlToFt(profile.priceBRL))}/mês</Price>
+        {profile.cover && <img src={profile.cover} alt="" loading="lazy" />}
       </Cover>
       <Body>
-        <Avatar name={profile.name} src={profile.avatar} size={64} ring />
+        <Avatar name={profile.handle} src={profile.avatar} size={64} ring />
         <div>
           <NameLine>
-            <span>{profile.name}</span>
+            <span>@{profile.handle}</span>
             {profile.verified && <VerifiedBadge size={16} />}
           </NameLine>
-          <HandleText>@{profile.handle}</HandleText>
         </div>
       </Body>
     </CardLink>
