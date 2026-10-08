@@ -1,4 +1,4 @@
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
 import { Header } from './Header'
@@ -40,8 +40,25 @@ export function CreatorOnly() {
   return <Outlet />
 }
 
+const AUTH_LOADING_MS = 500
+
+// Loading curto ao entrar em login/cadastro (ex.: ao sair da plataforma) + fade-in da página
+function AuthTransition() {
+  const { pathname } = useLocation()
+  const [readyPath, setReadyPath] = useState<string | null>(null)
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setReadyPath(pathname), AUTH_LOADING_MS)
+    return () => window.clearTimeout(id)
+  }, [pathname])
+
+  return (
+    <RouteTransition>{readyPath === pathname ? <Outlet /> : <PageLoader />}</RouteTransition>
+  )
+}
+
 export function GuestOnly() {
   const { user } = useApp()
   if (user) return <Navigate to="/" replace />
-  return <Outlet />
+  return <AuthTransition />
 }

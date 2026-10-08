@@ -1,3 +1,4 @@
+import { setToken } from '../api'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { mockProfiles } from '../data/mock'
 import type { CreatorInfo, Media, Profile, User } from '../types'
@@ -170,7 +171,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return { ok: true }
   }
 
-  const logout = () => setSessionId(null)
+  const logout = () => {
+    setToken(null)
+    setSessionId(null)
+  }
 
   const updateProfile: AppState['updateProfile'] = patch => {
     if (!user) return { ok: false, error: 'Sessão expirada.' }

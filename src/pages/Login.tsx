@@ -5,7 +5,7 @@ import styled from 'styled-components'
 import { Field } from '../components/Field'
 import { PasswordInput } from '../components/PasswordInput'
 import { Alert, Button, Input, Muted, Stack, Title } from '../components/ui'
-import { useApp } from '../store/AppContext'
+import { useSignIn } from '../store/useSignIn'
 import { AuthShell } from './AuthShell'
 
 const Demo = styled.div`
@@ -19,17 +19,22 @@ const Demo = styled.div`
 `
 
 export default function Login() {
-  const { login } = useApp()
+  const signIn = useSignIn()
   const navigate = useNavigate()
   const location = useLocation()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (loading) return
     if (!identifier.trim() || !password) return setError('Preencha e-mail/perfil e senha.')
-    const r = login(identifier, password)
+    setError('')
+    setLoading(true)
+    const r = await signIn(identifier, password)
+    setLoading(false)
     if (!r.ok) return setError(r.error)
     navigate((location.state as { from?: string } | null)?.from ?? '/', { replace: true })
   }
@@ -53,7 +58,7 @@ export default function Login() {
           <Field label="Senha">
             <PasswordInput value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
           </Field>
-          <Button type="submit" $block $size="lg">Entrar</Button>
+          <Button type="submit" $block $size="lg" disabled={loading}>{loading ? 'Entrando...' : 'Entrar'}</Button>
           <Muted style={{ textAlign: 'center' }}>
             Ainda não tem conta? <Link to="/cadastro"><b>Cadastre-se</b></Link>
           </Muted>

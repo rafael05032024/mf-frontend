@@ -31,6 +31,7 @@ const Panel = styled.div<{ $width: number }>`
   box-shadow: ${({ theme }) => theme.shadow.lg};
   padding-bottom: env(safe-area-inset-bottom);
   animation: ${rise} 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  &:focus { outline: none; }
   ${mq.sm} { border-radius: ${({ theme }) => theme.radius.lg}; }
 `
 

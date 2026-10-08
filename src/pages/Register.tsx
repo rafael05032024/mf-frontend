@@ -1,6 +1,9 @@
-import { useState, type FormEvent } from 'react'
-import { AlertCircle } from 'lucide-react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import styled from 'styled-components'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { createAccount, loginRequest } from '../api'
+import { Modal } from '../components/Modal'
 import { Field } from '../components/Field'
 import { PasswordInput } from '../components/PasswordInput'
 import { Alert, Button, Input, Muted, Stack, Title } from '../components/ui'
@@ -8,15 +11,39 @@ import { useApp } from '../store/AppContext'
 import { HANDLE_RE, isEmail, normalizeHandle } from '../utils/format'
 import { AuthShell } from './AuthShell'
 
+const Countdown = styled.div`
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 3px solid ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.primaryText};
+  font-size: 28px;
+  font-weight: 800;
+`
+
 type Errors = Partial<Record<'name' | 'email' | 'handle' | 'password', string>>
 
 export default function Register() {
-  const { register, handleAvailable } = useApp()
+  const { register, login, handleAvailable } = useApp()
   const navigate = useNavigate()
   const location = useLocation()
   const [form, setForm] = useState({ name: '', email: '', handle: '', password: '' })
   const [errors, setErrors] = useState<Errors>({})
   const [formError, setFormError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [redirecting, setRedirecting] = useState(false)
+  const [seconds, setSeconds] = useState(5)
+  const timer = useRef<number>(undefined)
+
+  useEffect(() => () => window.clearTimeout(timer.current), [])
+
+  useEffect(() => {
+    if (!redirecting) return
+    const id = window.setInterval(() => setSeconds(n => Math.max(n - 1, 0)), 1000)
+    return () => window.clearInterval(id)
+  }, [redirecting])
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = k === 'handle' ? normalizeHandle(e.target.value) : e.target.value
@@ -34,18 +61,44 @@ export default function Register() {
     return er
   }
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (loading || redirecting) return
     const er = validate()
     setErrors(er)
     if (Object.keys(er).length) return
-    const r = register(form)
-    if (!r.ok) return setFormError(r.error)
-    navigate((location.state as { from?: string } | null)?.from ?? '/', { replace: true })
+    setFormError('')
+    setLoading(true)
+    try {
+      await createAccount({ name: form.name.trim(), email: form.email.trim(), profile: form.handle, password: form.password })
+      await loginRequest(form.email.trim(), form.password)
+    } catch (err) {
+      setLoading(false)
+      return setFormError(err instanceof Error ? err.message : 'Não foi possível criar a conta.')
+    }
+    setLoading(false)
+    setRedirecting(true)
+    const to = (location.state as { from?: string } | null)?.from ?? '/'
+    // A sessão local só é criada no fim: GuestOnly redireciona quem já está logado e fecharia o modal
+    timer.current = window.setTimeout(() => {
+      const r = register(form)
+      if (!r.ok) login(form.email, form.password)
+      navigate(to, { replace: true })
+    }, 5000)
   }
 
   return (
     <AuthShell>
+      <Modal open={redirecting} onClose={() => {}} label="Conta criada" hideClose width={400}>
+        <div style={{ padding: '32px 24px', textAlign: 'center' }}>
+          <Stack $gap={14} style={{ alignItems: 'center' }}>
+            <CheckCircle2 size={56} color="#16a34a" />
+            <Title>Bem-vindo(a), {form.name.trim().split(' ')[0]}!</Title>
+            <Muted>Sua conta foi criada com sucesso. Você será redirecionado para a plataforma em instantes...</Muted>
+            <Countdown>{seconds}</Countdown>
+          </Stack>
+        </div>
+      </Modal>
       <form onSubmit={submit} noValidate>
         <Stack $gap={18}>
           <div>
@@ -69,7 +122,7 @@ export default function Register() {
           <Field label="Senha" error={errors.password} hint="Mínimo de 6 caracteres">
             <PasswordInput value={form.password} onChange={set('password')} autoComplete="new-password" />
           </Field>
-          <Button type="submit" $block $size="lg">Criar conta</Button>
+          <Button type="submit" $block $size="lg" disabled={loading || redirecting}>{loading ? 'Criando conta...' : 'Criar conta'}</Button>
           <Muted style={{ textAlign: 'center' }}>
             Já tem conta? <Link to="/login"><b>Entrar</b></Link>
           </Muted>
