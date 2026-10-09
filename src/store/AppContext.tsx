@@ -40,6 +40,8 @@ interface AppState {
   addPost: (post: Omit<Media, 'id' | 'createdAt'>) => Result
   markNotificationsRead: () => void
   handleAvailable: (handle: string) => boolean
+  /** Aplica o flag `verified` do login: true exibe a plataforma na visão de publicador */
+  applyVerified: (email: string, verified: boolean) => void
 }
 
 const AppContext = createContext<AppState | null>(null)
@@ -169,6 +171,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAccounts(prev => [...prev, u])
     setSessionId(u.id)
     return { ok: true }
+  }
+
+  const applyVerified: AppState['applyVerified'] = (email, verified) => {
+    if (!verified) return
+    const id = email.trim().toLowerCase()
+    setAccounts(prev =>
+      prev.map(a => {
+        if (a.email.toLowerCase() !== id || a.creatorStatus === 'verified') return a
+        return {
+          ...a,
+          creatorStatus: 'verified',
+          creator: a.creator ?? {
+            country: 'Brasil',
+            cpf: '',
+            legalName: a.name,
+            birthDate: '',
+            priceBRL: 29.9,
+            bio: '',
+            avatar: '',
+            cover: '',
+            stats: { monthly: [], pendingFt: 0 },
+          },
+        }
+      }),
+    )
   }
 
   const logout = () => {
@@ -319,6 +346,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addPost,
     markNotificationsRead,
     handleAvailable,
+    applyVerified,
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

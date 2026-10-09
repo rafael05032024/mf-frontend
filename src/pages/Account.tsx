@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { BarChart3, CreditCard, Eye, Hourglass, ListChecks, LogOut, Sparkles, UserPen } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { getBalance } from '../api'
+import { getActiveSubscriptionsCount, getBalance } from '../api'
 import { ActionItem, List } from '../components/ActionList'
 import { Avatar } from '../components/Avatar'
 import { VerifiedBadge } from '../components/icons'
@@ -57,13 +57,16 @@ export default function Account() {
   const isCreator = user.creatorStatus === 'verified'
   const [balance, setBalance] = useState<number | null>(null)
   const [balanceError, setBalanceError] = useState(false)
-  const activeSubs = user.subscriptions.filter(s => new Date(s.expiresAt) > new Date()).length
+  const [activeSubs, setActiveSubs] = useState<number | null>(null)
 
   useEffect(() => {
     let active = true
     getBalance()
       .then(b => active && setBalance(b))
       .catch(() => active && setBalanceError(true))
+    getActiveSubscriptionsCount()
+      .then(n => active && setActiveSubs(n))
+      .catch(() => {})
     return () => { active = false }
   }, [user.id])
 
@@ -119,7 +122,7 @@ export default function Account() {
           <ActionItem
             icon={<ListChecks size={20} />}
             title="Minhas assinaturas"
-            subtitle={activeSubs === 1 ? '1 assinatura ativa' : `${activeSubs} assinaturas ativas`}
+            subtitle={activeSubs === null ? '...' : activeSubs === 1 ? '1 assinatura ativa' : `${activeSubs} assinaturas ativas`}
             to="/conta/assinaturas"
           />
           <ActionItem icon={<UserPen size={20} />} title="Alterar dados do perfil" to="/conta/editar" />

@@ -1,11 +1,13 @@
+import { useEffect, useState } from 'react'
 import { ChevronRight, Search } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
+import { listSignatures } from '../api'
+import type { Signature } from '../api'
 import { List } from '../components/ActionList'
 import { Avatar } from '../components/Avatar'
 import { PageHeader } from '../components/PageHeader'
 import { Button, Muted, NarrowContainer } from '../components/ui'
-import { useAuthedUser } from '../store/AppContext'
 import { formatDate } from '../utils/format'
 
 const Item = styled(Link)`
@@ -39,13 +41,25 @@ const Empty = styled.div`
 `
 
 export default function Subscriptions() {
-  const user = useAuthedUser()
-  const subs = [...user.subscriptions].sort((a, b) => b.expiresAt.localeCompare(a.expiresAt))
+  const [subs, setSubs] = useState<Signature[] | null>(null)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    listSignatures()
+      .then(list => active && setSubs([...list].sort((a, b) => b.expiresAt.localeCompare(a.expiresAt))))
+      .catch(() => active && setError(true))
+    return () => { active = false }
+  }, [])
 
   return (
     <NarrowContainer>
       <PageHeader title="Minhas assinaturas" back="/conta" />
-      {subs.length === 0 ? (
+      {error ? (
+        <Muted>Não foi possível carregar suas assinaturas.</Muted>
+      ) : subs === null ? (
+        <Muted>Carregando...</Muted>
+      ) : subs.length === 0 ? (
         <Empty>
           <strong>Você ainda não assina nenhum perfil</strong>
           <Muted>Encontre criadores e tenha acesso a conteúdos exclusivos.</Muted>
@@ -56,7 +70,7 @@ export default function Subscriptions() {
           {subs.map(s => {
             const active = new Date(s.expiresAt) > new Date()
             return (
-              <li key={s.profileId}>
+              <li key={s.handle}>
                 <Item to={`/perfil/${s.handle}`}>
                   <Avatar name={s.handle} src={s.avatar} size={52} />
                   <div>

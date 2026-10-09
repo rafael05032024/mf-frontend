@@ -13,7 +13,7 @@ export function createAccount(payload: RegisterPayload) {
 }
 
 export async function login(email: string, password: string) {
-  const { token } = await api.post<{ token: string }>('/api/login', { email, password })
+  const { token, verified } = await api.post<{ token: string; verified?: boolean }>('/api/login', { email, password })
   setToken(token)
-  return token
+  return { token, verified: verified === true }
 }

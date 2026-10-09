@@ -7,3 +7,5 @@ export { getProfile, listProfiles, mediaUrl, subscribeToProfile } from './profil
 export type { ProfileSummary } from './profiles'
 export { createRecharge, getBalance, getWallet } from './wallet'
 export type { PixRecharge, Wallet, WalletTransaction } from './wallet'
+export { getActiveSubscriptionsCount, listSignatures } from './signatures'
+export type { Signature } from './signatures'
