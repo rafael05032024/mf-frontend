@@ -21,6 +21,8 @@ export interface Profile {
   instagram?: string
   tiktok?: string
   priceBRL: number
+  /** Usuário logado tem assinatura ativa com o perfil (libera mídias privadas) */
+  signed?: boolean
   featured?: boolean
   counters?: { photos: number; videos: number; private: number }
   media: Media[]

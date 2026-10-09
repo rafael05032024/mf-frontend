@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, CalendarCheck, Image as ImageIcon, Lock, Pencil, Plus, Video } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
-import { getProfile, ApiError } from '../api'
+import { getProfile, subscribeToProfile, ApiError } from '../api'
 import { PageLoader } from '../components/PageLoader'
 import { Avatar } from '../components/Avatar'
 import { InstagramIcon, TikTokIcon, VerifiedBadge } from '../components/icons'
@@ -150,12 +150,9 @@ const Subscribed = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 16px;
-  border-radius: ${({ theme }) => theme.radius.md};
-  background: ${({ theme }) => theme.colors.successSoft};
   color: ${({ theme }) => theme.colors.success};
   font-weight: 600;
-  font-size: 14px;
+  font-size: 12px;
 `
 
 const Tabs = styled.div`
@@ -208,7 +205,7 @@ const FILTERS: { key: Filter; label: string }[] = [
 export default function ProfileDetail() {
   const { handle = '' } = useParams()
   const navigate = useNavigate()
-  const { user, isSubscribed, subscribe } = useApp()
+  const { user, isSubscribed } = useApp()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -216,6 +213,10 @@ export default function ProfileDetail() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
   const [successOpen, setSuccessOpen] = useState(false)
+  // Muda após assinar: força o navegador a rebuscar as mídias (antes bloqueadas/em cache)
+  const [mediaVersion, setMediaVersion] = useState(0)
+  const [submitting, setSubmitting] = useState(false)
+  const [subscribeError, setSubscribeError] = useState('')
   const [viewing, setViewing] = useState<Media | null>(null)
   const closeSuccess = useCallback(() => setSuccessOpen(false), [])
 
@@ -234,10 +235,12 @@ export default function ProfileDetail() {
     return () => { active = false }
   }, [handle, user?.id]) // recarrega ao logar/deslogar (token muda)
 
-  const media = useMemo(
-    () => (profile ? (filter === 'all' ? profile.media : profile.media.filter(m => m.type === filter)) : []),
-    [profile, filter],
-  )
+  const media = useMemo(() => {
+    if (!profile) return []
+    const list = filter === 'all' ? profile.media : profile.media.filter(m => m.type === filter)
+    if (!mediaVersion) return list
+    return list.map(m => ({ ...m, url: `${m.url}${m.url.includes('?') ? '&' : '?'}v=${mediaVersion}` }))
+  }, [profile, filter, mediaVersion])
 
   if (loading) return <PageLoader />
 
@@ -256,18 +259,38 @@ export default function ProfileDetail() {
   const isOwner = user?.handle === profile.handle
   const subscribed = isSubscribed(profile.id)
   const subscription = user?.subscriptions.find(s => s.profileId === profile.id)
-  const canSee = isOwner || subscribed
+  const isSigned = subscribed || !!profile.signed
+  const canSee = isOwner || isSigned
   const photos = profile.counters?.photos ?? profile.media.filter(m => m.type === 'photo').length
   const videos = profile.counters?.videos ?? profile.media.length - photos
   const priv = profile.counters?.private ?? profile.media.filter(m => m.paid).length
 
-  const askSubscribe = () => (user ? setConfirmOpen(true) : setLoginOpen(true))
+  const askSubscribe = () => {
+    if (!user) return setLoginOpen(true)
+    setSubscribeError('')
+    setConfirmOpen(true)
+  }
 
-  const confirm = () => {
-    const r = subscribe(profile)
-    if (!r.ok) return
+  const confirm = async () => {
+    setSubmitting(true)
+    setSubscribeError('')
+    try {
+      await subscribeToProfile(profile.handle)
+    } catch (e) {
+      setSubscribeError(e instanceof Error ? e.message : 'Não foi possível concluir a assinatura')
+      setSubmitting(false)
+      return
+    }
+    setSubmitting(false)
     setConfirmOpen(false)
     setSuccessOpen(true)
+    // Recarrega o perfil (sem loader de página, para não desmontar os modais)
+    getProfile(handle)
+      .then(p => {
+        setProfile(p)
+        setMediaVersion(Date.now())
+      })
+      .catch(() => {})
   }
 
   return (
@@ -322,9 +345,9 @@ export default function ProfileDetail() {
                 <Pencil size={18} /> Editar perfil
               </Button>
             </Actions>
-          ) : subscribed && subscription ? (
+          ) : isSigned ? (
             <Subscribed role="status">
-              <CalendarCheck size={20} /> Assinante · acesso até {formatDate(subscription.expiresAt)}
+              <CalendarCheck size={16} /> Assinante{subscription && <> · acesso até {formatDate(subscription.expiresAt)}</>}
             </Subscribed>
           ) : (
             <Button $size="lg" $block onClick={askSubscribe}>
@@ -354,6 +377,7 @@ export default function ProfileDetail() {
           </Empty>
         ) : (
           <MediaGrid
+            key={mediaVersion}
             media={media}
             isLocked={m => m.paid && !canSee}
             onOpen={m => (m.paid && !canSee ? askSubscribe() : setViewing(m))}
@@ -365,9 +389,10 @@ export default function ProfileDetail() {
         <SubscribeModal
           profile={profile}
           open={confirmOpen}
-          balanceFt={user?.balanceFt ?? 0}
           onClose={() => setConfirmOpen(false)}
           onConfirm={confirm}
+          submitting={submitting}
+          error={subscribeError}
         />
       )}
       <LoginModal open={loginOpen && !user} onClose={() => setLoginOpen(false)} />

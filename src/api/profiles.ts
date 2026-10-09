@@ -45,6 +45,7 @@ interface ProfileDetailDTO {
   cover_photo: string | null
   posts: { content: string; type: 'image' | 'video'; is_private: boolean }[]
   plan_value: number
+  signed: boolean
   counters: { private_midias: number; images: number; videos: number }
 }
 
@@ -64,6 +65,7 @@ export async function getProfile(handle: string): Promise<Profile> {
     instagram: stripAt(p.instagram),
     tiktok: stripAt(p.tiktok),
     priceBRL: p.plan_value,
+    signed: p.signed,
     counters: { photos: p.counters.images, videos: p.counters.videos, private: p.counters.private_midias },
     media: p.posts.map(m => ({
       id: m.content,
@@ -74,4 +76,9 @@ export async function getProfile(handle: string): Promise<Profile> {
       createdAt: '',
     })),
   }
+}
+
+/** Assina o perfil (producer) debitando da carteira */
+export function subscribeToProfile(producer: string): Promise<void> {
+  return api.post<void>('/api/signatures', { producer })
 }

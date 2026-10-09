@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { AlertTriangle, CheckCircle2, Wallet } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
+import { getBalance } from '../api'
 import type { Profile } from '../types'
 import { brlToFt, formatBRL, formatFt } from '../utils/format'
 import { Avatar } from './Avatar'
@@ -38,15 +39,30 @@ const PriceBox = styled.div`
 interface ConfirmProps {
   profile: Profile
   open: boolean
-  balanceFt: number
   onClose: () => void
   onConfirm: () => void
+  submitting?: boolean
+  error?: string
 }
 
-export function SubscribeModal({ profile, open, balanceFt, onClose, onConfirm }: ConfirmProps) {
+export function SubscribeModal({ profile, open, onClose, onConfirm, submitting, error }: ConfirmProps) {
   const navigate = useNavigate()
+  const [balanceFt, setBalanceFt] = useState<number | null>(null)
+  const [balanceError, setBalanceError] = useState(false)
   const cost = brlToFt(profile.priceBRL)
-  const insufficient = balanceFt < cost
+  const insufficient = balanceFt !== null && balanceFt < cost
+
+  // Busca o saldo real sempre que o modal abre
+  useEffect(() => {
+    if (!open) return
+    let active = true
+    setBalanceFt(null)
+    setBalanceError(false)
+    getBalance()
+      .then(b => active && setBalanceFt(b))
+      .catch(() => active && setBalanceError(true))
+    return () => { active = false }
+  }, [open])
 
   return (
     <Modal open={open} onClose={onClose} label={`Assinar @${profile.handle}`}>
@@ -62,27 +78,33 @@ export function SubscribeModal({ profile, open, balanceFt, onClose, onConfirm }:
 
         <PriceBox>
           <div><span>Assinatura mensal</span><span>{formatBRL(profile.priceBRL)}</span></div>
-          <div><span>Seu saldo</span><span>{formatFt(balanceFt)}</span></div>
+          <div><span>Seu saldo</span><span>{balanceFt !== null ? formatFt(balanceFt) : balanceError ? 'Indisponível' : '...'}</span></div>
           <div className="total"><span>Total</span><span>{formatFt(cost)}</span></div>
         </PriceBox>
 
         <Stack $gap={12}>
+          {error && (
+            <Alert $tone="warning" role="alert" style={{ textAlign: 'left' }}>
+              <AlertTriangle size={18} />
+              {error}
+            </Alert>
+          )}
           {insufficient ? (
             <>
               <Alert $tone="warning" role="alert" style={{ textAlign: 'left' }}>
                 <AlertTriangle size={18} />
-                Saldo insuficiente. Faltam {formatFt(cost - balanceFt)} para assinar.
+                Saldo insuficiente. Faltam {formatFt(cost - (balanceFt ?? 0))} para assinar.
               </Alert>
               <Button $block $size="lg" onClick={() => navigate('/conta/carteira/recarregar')}>
                 <Wallet size={18} /> Recarregar carteira
               </Button>
             </>
           ) : (
-            <Button $block $size="lg" onClick={onConfirm}>
-              Confirmar assinatura
+            <Button $block $size="lg" onClick={onConfirm} disabled={balanceFt === null || submitting}>
+              {submitting ? 'Assinando...' : 'Confirmar assinatura'}
             </Button>
           )}
-          <Button $variant="ghost" $block onClick={onClose}>Cancelar</Button>
+          <Button $variant="ghost" $block onClick={onClose} disabled={submitting}>Cancelar</Button>
         </Stack>
       </Body>
     </Modal>
