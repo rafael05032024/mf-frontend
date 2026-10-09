@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react'
 import { BarChart3, CreditCard, Eye, Hourglass, ListChecks, LogOut, Sparkles, UserPen } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import { getBalance } from '../api'
 import { ActionItem, List } from '../components/ActionList'
 import { Avatar } from '../components/Avatar'
 import { VerifiedBadge } from '../components/icons'
@@ -53,7 +55,19 @@ export default function Account() {
   const { logout } = useApp()
   const navigate = useNavigate()
   const isCreator = user.creatorStatus === 'verified'
+  const [balance, setBalance] = useState<number | null>(null)
+  const [balanceError, setBalanceError] = useState(false)
   const activeSubs = user.subscriptions.filter(s => new Date(s.expiresAt) > new Date()).length
+
+  useEffect(() => {
+    let active = true
+    getBalance()
+      .then(b => active && setBalance(b))
+      .catch(() => active && setBalanceError(true))
+    return () => { active = false }
+  }, [user.id])
+
+  const balanceLabel = balance !== null ? formatFt(balance) : balanceError ? 'Indisponível' : '...'
 
   return (
     <NarrowContainer>
@@ -69,8 +83,8 @@ export default function Account() {
         <Balance aria-label="Saldo em carteira">
           <div>
             <span>Saldo em carteira</span>
-            <strong>{formatFt(user.balanceFt)}</strong>
-            <small>≈ {formatBRL(ftToBrl(user.balanceFt))}</small>
+            <strong>{balanceLabel}</strong>
+            {balance !== null && <small>≈ {formatBRL(ftToBrl(balance))}</small>}
           </div>
           <Button $size="sm" onClick={() => navigate('/conta/carteira/recarregar')}>Recarregar</Button>
         </Balance>
@@ -101,7 +115,7 @@ export default function Account() {
               subtitle="Estamos analisando seus documentos. Avisaremos por notificação."
             />
           )}
-          <ActionItem icon={<CreditCard size={20} />} title="Carteira" subtitle={formatFt(user.balanceFt)} to="/conta/carteira" />
+          <ActionItem icon={<CreditCard size={20} />} title="Carteira" subtitle={balanceLabel} to="/conta/carteira" />
           <ActionItem
             icon={<ListChecks size={20} />}
             title="Minhas assinaturas"

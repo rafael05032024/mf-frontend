@@ -1,4 +1,4 @@
-export const FT_PER_BRL = 30
+export const FT_PER_BRL = 3
 export const MIN_BRL = 15
 export const MAX_BRL = 150
 

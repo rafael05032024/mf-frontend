@@ -1,16 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, Copy, QrCode } from 'lucide-react'
-import { QRCodeSVG } from 'qrcode.react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import { createRecharge, getBalance } from '../api'
 import { AmountPicker, parseBRL, validateBRL } from '../components/AmountPicker'
 import { Modal } from '../components/Modal'
 import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 import { Button, Card, Muted, NarrowContainer, Stack } from '../components/ui'
-import { useApp, useAuthedUser } from '../store/AppContext'
-import { brlToFt, formatBRL, formatFt, uid } from '../utils/format'
-import { pixPayload } from '../utils/pix'
+import { brlToFt, formatBRL, formatFt } from '../utils/format'
 
 const Summary = styled.dl`
   margin: 0;
@@ -45,25 +43,42 @@ const Pix = styled.div`
 `
 
 export default function Recharge() {
-  const user = useAuthedUser()
-  const { recharge } = useApp()
   const toast = useToast()
   const navigate = useNavigate()
   const [value, setValue] = useState('30')
   const [error, setError] = useState<string>()
-  const [pix, setPix] = useState<{ amount: number; payload: string } | null>(null)
+  const [pix, setPix] = useState<{ amount: number; payload: string; qrCodeImage: string } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [balance, setBalance] = useState<number | null>(null)
+  const [balanceError, setBalanceError] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    getBalance()
+      .then(b => active && setBalance(b))
+      .catch(() => active && setBalanceError(true))
+    return () => { active = false }
+  }, [])
 
   const amount = parseBRL(value)
   const valid = !validateBRL(value)
   const addFt = valid ? brlToFt(amount) : 0
 
-  const next = () => {
+  const next = async () => {
     const er = validateBRL(value)
     setError(er)
     if (er) return
     setCopied(false)
-    setPix({ amount, payload: pixPayload(amount, `MF${uid().toUpperCase()}`) })
+    setLoading(true)
+    try {
+      const r = await createRecharge(amount)
+      setPix({ amount, payload: r.payload, qrCodeImage: r.qrCodeImage })
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível gerar o PIX. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const copy = async () => {
@@ -78,9 +93,8 @@ export default function Recharge() {
 
   const confirmPaid = () => {
     if (!pix) return
-    recharge(pix.amount)
     setPix(null)
-    toast({ title: 'Recarga confirmada!', message: `${formatFt(brlToFt(pix.amount))} adicionados à sua carteira.`, tone: 'success' })
+    toast({ title: 'Pagamento em processamento', message: `${formatFt(brlToFt(pix.amount))} serão adicionados à sua carteira após a confirmação.`, tone: 'success' })
     navigate('/conta/carteira')
   }
 
@@ -96,13 +110,13 @@ export default function Recharge() {
 
         <Card>
           <Summary>
-            <div><dt>Saldo atual</dt><dd>{formatFt(user.balanceFt)}</dd></div>
+            <div><dt>Saldo atual</dt><dd>{balance !== null ? formatFt(balance) : balanceError ? 'Indisponível' : '...'}</dd></div>
             <div><dt>Recarga</dt><dd className="plus">+ {formatFt(addFt)}</dd></div>
-            <div className="total"><dt>Saldo após recarga</dt><dd>{formatFt(user.balanceFt + addFt)}</dd></div>
+            <div className="total"><dt>Saldo após recarga</dt><dd>{balance !== null ? formatFt(balance + addFt) : balanceError ? 'Indisponível' : '...'}</dd></div>
           </Summary>
         </Card>
 
-        <Button $size="lg" $block onClick={next} disabled={!valid}>Continuar</Button>
+        <Button $size="lg" $block onClick={next} disabled={!valid || loading}>{loading ? 'Gerando PIX...' : 'Continuar'}</Button>
       </Stack>
 
       <Modal open={!!pix} onClose={() => setPix(null)} label="Pagamento via PIX" width={420}>
@@ -112,7 +126,7 @@ export default function Recharge() {
             <p className="value">{formatBRL(pix.amount)}</p>
             <Muted>Você receberá {formatFt(brlToFt(pix.amount))}</Muted>
             <div className="qr" role="img" aria-label="QR Code PIX para pagamento">
-              <QRCodeSVG value={pix.payload} size={200} level="M" />
+              <img src={`data:image/png;base64,${pix.qrCodeImage}`} alt="" width={200} height={200} />
             </div>
             <Stack $gap={12}>
               <Muted>Escaneie o QR Code no app do seu banco ou use o PIX copia e cola:</Muted>

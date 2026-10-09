@@ -57,7 +57,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
         <h1>Seu conteúdo, seu preço, sua comunidade.</h1>
         <p>O marketplace feito para criadores de conteúdo de pés monetizarem com mais facilidade e segurança.</p>
         <ul>
-          <li><Coins size={22} /> Pagamentos em FootCoin: R$ 1,00 = 30 ft</li>
+          <li><Coins size={22} /> Pagamentos em FootCoin: R$ 1,00 = 3 ft</li>
           <li><ShieldCheck size={22} /> Criadores verificados por documento</li>
           <li><Lock size={22} /> Conteúdo exclusivo para assinantes</li>
         </ul>

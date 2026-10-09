@@ -1,11 +1,13 @@
+import { useEffect, useState } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Banknote, Plus, Receipt } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import { getWallet, type Wallet as WalletData } from '../api'
 import { PageHeader } from '../components/PageHeader'
 import { Button, Card, Muted, NarrowContainer, SectionTitle, Stack } from '../components/ui'
 import { useAuthedUser } from '../store/AppContext'
 import { mq } from '../styles/theme'
-import { formatBRL, formatDateTime, formatFt, ftToBrl } from '../utils/format'
+import { formatBRL, formatFt, ftToBrl } from '../utils/format'
 
 const BalanceCard = styled.section`
   padding: 24px 20px;
@@ -67,7 +69,17 @@ const Empty = styled.div`
 export default function Wallet() {
   const user = useAuthedUser()
   const navigate = useNavigate()
+  const [wallet, setWallet] = useState<WalletData | null>(null)
+  const [error, setError] = useState<string>()
   const isCreator = user.creatorStatus === 'verified'
+
+  useEffect(() => {
+    let active = true
+    getWallet()
+      .then(w => active && setWallet(w))
+      .catch(e => active && setError(e instanceof Error ? e.message : 'Erro ao carregar a carteira'))
+    return () => { active = false }
+  }, [user.id])
 
   return (
     <NarrowContainer>
@@ -75,8 +87,8 @@ export default function Wallet() {
       <Stack $gap={20}>
         <BalanceCard aria-label="Saldo em carteira">
           <span>Saldo disponível</span>
-          <strong>{formatFt(user.balanceFt)}</strong>
-          <small>≈ {formatBRL(ftToBrl(user.balanceFt))} · R$ 1,00 = 30 ft</small>
+          <strong>{wallet ? formatFt(wallet.balance) : error ? 'Indisponível' : '...'}</strong>
+          <small>{wallet ? `≈ ${formatBRL(ftToBrl(wallet.balance))} · ` : ''}R$ 1,00 = 3 ft</small>
           <Actions $single={!isCreator}>
             <Button $block onClick={() => navigate('/conta/carteira/recarregar')}>
               <Plus size={18} strokeWidth={2.6} /> Recarregar
@@ -91,15 +103,19 @@ export default function Wallet() {
 
         <Card>
           <SectionTitle>Últimas transações</SectionTitle>
-          {user.transactions.length === 0 ? (
+          {!wallet ? (
+            <Empty>
+              <Muted>{error ?? 'Carregando...'}</Muted>
+            </Empty>
+          ) : wallet.transactions.length === 0 ? (
             <Empty>
               <Receipt size={32} aria-hidden />
               <Muted>Nenhuma transação ainda.</Muted>
             </Empty>
           ) : (
             <TxList>
-              {user.transactions.slice(0, 30).map(t => {
-                const incoming = t.amountFt > 0
+              {wallet.transactions.map(t => {
+                const incoming = t.incoming
                 return (
                   <li key={t.id}>
                     <TxIcon $in={incoming} aria-hidden>
@@ -107,11 +123,10 @@ export default function Wallet() {
                     </TxIcon>
                     <div>
                       <strong>{t.description}</strong>
-                      <small>{formatDateTime(t.date)}</small>
                     </div>
                     <Amount $in={incoming}>
                       <span className="sr-only">{incoming ? 'entrada de' : 'saída de'}</span>
-                      {incoming ? '+' : '−'} {formatFt(Math.abs(t.amountFt))}
+                      {incoming ? '+' : '−'} {formatFt(t.amountFt)}
                     </Amount>
                   </li>
                 )
