@@ -1,7 +1,9 @@
-import { cloneElement, useState } from 'react'
+import { cloneElement, useRef, useState } from 'react'
 import { AtSign, ShieldCheck } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import { ApiError, createLiveness, createPlan, updateMe, uploadCover, uploadPhoto } from '../api'
 import { AmountPicker, parseBRL, validateBRL } from '../components/AmountPicker'
 import { EmojiTextarea } from '../components/EmojiTextarea'
 import { Field } from '../components/Field'
@@ -9,7 +11,7 @@ import { InstagramIcon, TikTokIcon } from '../components/icons'
 import { ImageUpload } from '../components/ImageUpload'
 import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
-import { Alert, Button, Card, Input, Muted, NarrowContainer, Select, Stack } from '../components/ui'
+import { Alert, Button, Card, Input, Muted, NarrowContainer, Stack } from '../components/ui'
 import { useApp, useAuthedUser } from '../store/AppContext'
 import { mq } from '../styles/theme'
 import { ageFrom, brlToFt, formatFt, HANDLE_RE, isValidCPF, maskCPF, normalizeHandle } from '../utils/format'
@@ -20,10 +22,9 @@ const STEPS = [
   { title: 'Capa e biografia', desc: 'Capriche: é a primeira impressão do seu perfil.' },
   { title: 'Redes sociais', desc: 'Opcional. Ajuda seus seguidores a te encontrarem.' },
   { title: 'Valor da assinatura', desc: 'Quanto seus assinantes pagarão por mês.' },
-  { title: 'Verificação de documento', desc: 'Envie fotos nítidas do seu RG para validarmos seu perfil.' },
+  { title: 'Verificação de documento', desc: 'Escaneie o QRCode com o celular para verificar seu documento.' },
 ]
 
-const COUNTRIES = ['Brasil', 'Portugal', 'Argentina', 'Estados Unidos', 'Outro']
 
 const Progress = styled.div`
   margin-bottom: 16px;
@@ -50,11 +51,13 @@ const Prefixed = styled.div`
   input { padding-left: 44px; }
 `
 
-const DocGrid = styled.div`
-  display: grid;
-  gap: 16px;
-  ${mq.sm} { grid-template-columns: 1fr 1fr; }
-  > div:last-child { ${mq.sm} { grid-column: 1 / -1; } }
+const QRBox = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  .qr { padding: 16px; background: #fff; border-radius: ${({ theme }) => theme.radius.md}; border: 1px solid ${({ theme }) => theme.colors.border}; line-height: 0; }
 `
 
 const PriceSummary = styled.div`
@@ -82,9 +85,6 @@ type Form = {
   instagram: string
   tiktok: string
   price: string
-  rgFront: string
-  rgBack: string
-  selfie: string
 }
 type Errors = Partial<Record<keyof Form, string>>
 
@@ -105,6 +105,8 @@ export default function BecomeCreator() {
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [errors, setErrors] = useState<Errors>({})
+  const [verifyUrl, setVerifyUrl] = useState('')
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState<Form>({
     country: 'Brasil',
     cpf: '',
@@ -118,10 +120,10 @@ export default function BecomeCreator() {
     instagram: '',
     tiktok: '',
     price: '29.90',
-    rgFront: '',
-    rgBack: '',
-    selfie: '',
   })
+
+  // evita reenviar o que já foi salvo quando o usuário volta e avança de novo
+  const sent = useRef<Partial<Record<string, string>>>({})
 
   if (user.creatorStatus !== 'none') return <Navigate to="/conta" replace />
 
@@ -150,20 +152,71 @@ export default function BecomeCreator() {
       if (form.bio.trim().length < 10) er.bio = 'A biografia deve ter pelo menos 10 caracteres.'
     }
     if (s === 4) er.price = validateBRL(form.price)
-    if (s === 5) {
-      if (!form.rgFront) er.rgFront = 'Envie a frente do RG.'
-      if (!form.rgBack) er.rgBack = 'Envie o verso do RG.'
-      if (!form.selfie) er.selfie = 'Envie a foto segurando o RG.'
-    }
     return Object.fromEntries(Object.entries(er).filter(([, v]) => v)) as Errors
   }
 
-  const next = () => {
+  const once = async (key: string, value: string, fn: () => Promise<unknown>) => {
+    if (sent.current[key] === value) return
+    await fn()
+    sent.current[key] = value
+  }
+
+  /** Salva na API os dados da etapa atual */
+  const saveStep = async (s: number) => {
+    if (s === 0)
+      await once('s0', JSON.stringify([form.cpf, form.legalName, form.birthDate]), () =>
+        updateMe({ document: form.cpf.replace(/\D/g, ''), real_name: form.legalName.trim(), birthdate: form.birthDate }))
+    if (s === 1) {
+      await once('avatar', form.avatar, () => uploadPhoto(form.avatar))
+      await once('s1', JSON.stringify([form.displayName, form.handle]), () =>
+        updateMe({ name: form.displayName.trim(), profile: `@${form.handle}` }))
+    }
+    if (s === 2) {
+      await once('cover', form.cover, () => uploadCover(form.cover))
+      await once('s2', form.bio, () => updateMe({ description: form.bio.trim() }))
+    }
+    if (s === 3) {
+      const instagram = normalizeHandle(form.instagram)
+      const tiktok = normalizeHandle(form.tiktok)
+      await once('s3', JSON.stringify([instagram, tiktok]), () =>
+        updateMe({ instagram: instagram ? `@${instagram}` : '', tiktok: tiktok ? `@${tiktok}` : '' }))
+    }
+    if (s === 4) {
+      await once('price', form.price, () => createPlan(parseBRL(form.price)))
+      await loadVerification()
+    }
+  }
+
+  const loadVerification = async () => {
+    if (!verifyUrl) setVerifyUrl(await createLiveness())
+  }
+
+  const next = async () => {
     const er = validate(step)
     setErrors(er)
     if (Object.keys(er).length) return
+    setSaving(true)
+    try {
+      await saveStep(step)
+    } catch (e) {
+      toast({ title: 'Não foi possível salvar', message: e instanceof ApiError ? e.message : 'Tente novamente.' })
+      return
+    } finally {
+      setSaving(false)
+    }
     setStep(s => s + 1)
     window.scrollTo({ top: 0 })
+  }
+
+  const retryVerification = async () => {
+    setSaving(true)
+    try {
+      await loadVerification()
+    } catch (e) {
+      toast({ title: 'Não foi possível gerar o QRCode', message: e instanceof ApiError ? e.message : 'Tente novamente.' })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const back = () => {
@@ -173,9 +226,6 @@ export default function BecomeCreator() {
   }
 
   const submit = () => {
-    const er = validate(5)
-    setErrors(er)
-    if (Object.keys(er).length) return
     const r = submitCreator({
       displayName: form.displayName,
       handle: form.handle,
@@ -197,13 +247,12 @@ export default function BecomeCreator() {
     }
     toast({
       title: 'Perfil em validação',
-      message: 'Recebemos seus documentos e estamos validando seu perfil. Você será notificado assim que for aprovado.',
+      message: 'Estamos validando seu perfil. Você será notificado assim que for aprovado.',
       duration: 10_000,
     })
     navigate('/conta')
   }
 
-  const docsReady = !!(form.rgFront && form.rgBack && form.selfie)
   const isLast = step === STEPS.length - 1
   const priceValid = !validateBRL(form.price)
 
@@ -231,9 +280,7 @@ export default function BecomeCreator() {
           {step === 0 && (
             <>
               <Field label="País" error={errors.country}>
-                <Select value={form.country} onChange={e => set('country', e.target.value)}>
-                  {COUNTRIES.map(c => <option key={c}>{c}</option>)}
-                </Select>
+                <Input value="Brasil" readOnly />
               </Field>
               <Field label="CPF" error={errors.cpf}>
                 <Input inputMode="numeric" value={form.cpf} onChange={e => set('cpf', maskCPF(e.target.value))} placeholder="000.000.000-00" />
@@ -302,14 +349,17 @@ export default function BecomeCreator() {
 
           {step === 5 && (
             <>
-              <DocGrid>
-                <ImageUpload label="RG (frente)" value={form.rgFront} onChange={v => set('rgFront', v)} error={errors.rgFront} hint="Enviar frente" />
-                <ImageUpload label="RG (verso)" value={form.rgBack} onChange={v => set('rgBack', v)} error={errors.rgBack} hint="Enviar verso" />
-                <ImageUpload label="Foto segurando o RG" value={form.selfie} onChange={v => set('selfie', v)} error={errors.selfie} hint="Selfie com o documento ao lado do rosto" />
-              </DocGrid>
+              <QRBox>
+                {verifyUrl ? (
+                  <div className="qr"><QRCodeSVG value={verifyUrl} size={200} /></div>
+                ) : (
+                  <Button $variant="ghost" onClick={retryVerification} disabled={saving}>Gerar QRCode</Button>
+                )}
+                <Muted>Abra a câmera do celular, escaneie o código e siga as instruções do provedor de verificação.</Muted>
+              </QRBox>
               <Alert $tone="info">
                 <ShieldCheck size={18} />
-                Seus documentos são usados apenas para verificação e nunca ficam visíveis no seu perfil.
+                A verificação é feita por um provedor externo; seus documentos nunca ficam visíveis no seu perfil.
               </Alert>
             </>
           )}
@@ -317,9 +367,9 @@ export default function BecomeCreator() {
           <Nav>
             <Button $variant="ghost" onClick={back}>{step === 0 ? 'Cancelar' : 'Voltar'}</Button>
             {!isLast ? (
-              <Button onClick={next} $block>Próximo</Button>
+              <Button onClick={next} $block disabled={saving}>{saving ? 'Salvando…' : 'Próximo'}</Button>
             ) : (
-              docsReady && <Button onClick={submit} $block>Encaminhar para validação</Button>
+              <Button onClick={submit} $block disabled={!verifyUrl}>Encaminhar para validação</Button>
             )}
           </Nav>
         </Stack>

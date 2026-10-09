@@ -1,7 +1,7 @@
 export { api, ApiError, setUnauthorizedHandler } from './client'
 export { API_URL } from './config'
 export { getToken, setToken } from './token'
-export { createAccount, getMe, login as loginRequest } from './auth'
+export { createAccount, createLiveness, createPlan, getMe, login as loginRequest, updateMe, uploadCover, uploadPhoto } from './auth'
 export type { RegisterPayload } from './auth'
 export { getProfile, listProfiles, mediaUrl, subscribeToProfile } from './profiles'
 export type { ProfileSummary } from './profiles'

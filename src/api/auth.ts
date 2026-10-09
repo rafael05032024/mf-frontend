@@ -19,6 +19,7 @@ export interface Me {
   thumb: string | null
   balance: number
   subscriptions: number
+  verified?: boolean
 }
 
 export function getMe() {
@@ -26,9 +27,54 @@ export function getMe() {
 }
 
 export async function login(email: string, password: string) {
-  const { token, verified } = await api.post<{ token: string; verified?: boolean }>('/api/login', { email, password })
+  const { token } = await api.post<{ token: string }>('/api/login', { email, password })
   setToken(token)
-  // perfil (@) e nome reais da conta; falha aqui não deve impedir o login
+  // perfil (@), nome e flag de publicador (verified) vêm de /accounts/me; falha aqui não deve impedir o login
   const me = await getMe().catch(() => undefined)
-  return { token, verified: verified === true, profile: me?.profile.replace(/^@/, ''), name: me?.name, avatar: mediaUrl(me?.thumb) }
+  return { token, verified: me?.verified === true, profile: me?.profile.replace(/^@/, ''), name: me?.name, avatar: mediaUrl(me?.thumb) }
+}
+
+export interface UpdateMePayload {
+  document?: string
+  real_name?: string
+  birthdate?: string
+  name?: string
+  profile?: string
+  description?: string
+  instagram?: string
+  tiktok?: string
+}
+
+/** Atualização parcial dos dados da conta (cada etapa do cadastro de criador envia só os seus campos) */
+export function updateMe(data: UpdateMePayload) {
+  return api.patch<void>('/api/accounts/me', data)
+}
+
+function dataUrlToBlob(dataUrl: string) {
+  const [head, b64] = dataUrl.split(',')
+  const type = /data:([^;]+)/.exec(head)?.[1] ?? 'image/jpeg'
+  const bin = atob(b64)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return new Blob([bytes], { type })
+}
+
+function uploadImage(path: string, dataUrl: string) {
+  const form = new FormData()
+  form.append('file', dataUrlToBlob(dataUrl), 'image.jpg')
+  return api.post<void>(path, form)
+}
+
+export const uploadPhoto = (dataUrl: string) => uploadImage('/api/accounts/me/photo', dataUrl)
+export const uploadCover = (dataUrl: string) => uploadImage('/api/accounts/me/cover', dataUrl)
+
+/** Cria o plano de assinatura. `value` em reais */
+export function createPlan(value: number) {
+  return api.post<unknown>('/api/plans', { value })
+}
+
+/** Inicia a sessão de verificação de documento; retorna o link do provedor externo (exibido como QRCode) */
+export async function createLiveness(): Promise<string> {
+  const { verificationUrl } = await api.post<{ id: number; verificationUrl: string }>('/api/liveness')
+  return verificationUrl
 }
