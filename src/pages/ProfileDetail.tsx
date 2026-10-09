@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CalendarCheck, Image as ImageIcon, Lock, Pencil, Plus, Video } from 'lucide-react'
+import { ArrowLeft, CalendarCheck, Image as ImageIcon, Lock, Pencil, Plus, Trash2, Video } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
-import { getProfile, subscribeToProfile, ApiError } from '../api'
+import { deletePost, getProfile, subscribeToProfile, updatePost, ApiError } from '../api'
 import { PageLoader } from '../components/PageLoader'
 import { Avatar } from '../components/Avatar'
 import { InstagramIcon, TikTokIcon, VerifiedBadge } from '../components/icons'
@@ -11,11 +11,12 @@ import { LoginModal } from '../components/LoginModal'
 import { MediaViewer } from '../components/MediaViewer'
 import { Modal } from '../components/Modal'
 import { SubscribeModal, SuccessModal } from '../components/SubscribeModals'
-import { Button, Container, Muted, Title } from '../components/ui'
+import { Switch } from '../components/Switch'
+import { Alert, Button, Container, Muted, Textarea, Title } from '../components/ui'
 import { useApp } from '../store/AppContext'
 import { mq } from '../styles/theme'
 import type { Media, MediaType, Profile } from '../types'
-import { brlToFt, formatDate, formatFt } from '../utils/format'
+import { brlToFt, formatDate, formatFt, normalizeHandle } from '../utils/format'
 
 const Wrap = styled(Container)`
   padding-top: 0;
@@ -202,6 +203,67 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'video', label: 'VÍDEOS' },
 ]
 
+function OwnerActions({ media, onDeleted, onSaved }: { media: Media; onDeleted: () => void; onSaved: (m: Media) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [caption, setCaption] = useState(media.caption)
+  const [paid, setPaid] = useState(media.paid)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const run = async (fn: () => Promise<void>) => {
+    setBusy(true)
+    setError('')
+    try {
+      await fn()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível concluir a ação.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const save = () =>
+    run(async () => {
+      await updatePost(media.id, { caption: caption.trim(), is_private: paid })
+      onSaved({ ...media, caption: caption.trim(), paid })
+      setEditing(false)
+    })
+
+  const remove = () =>
+    run(async () => {
+      await deletePost(media.id)
+      onDeleted()
+    })
+
+  return (
+    <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>
+      {error && <Alert $tone="danger" role="alert">{error}</Alert>}
+      {editing ? (
+        <>
+          <Textarea value={caption} onChange={e => setCaption(e.target.value)} rows={3} maxLength={500} placeholder="Legenda" aria-label="Legenda" />
+          <Switch checked={paid} onChange={setPaid} label="Conteúdo exclusivo" description="Apenas assinantes podem ver" />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button $size="sm" onClick={save} disabled={busy}>Salvar</Button>
+            <Button $size="sm" $variant="outline" onClick={() => setEditing(false)} disabled={busy}>Cancelar</Button>
+          </div>
+        </>
+      ) : confirming ? (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <span>Excluir esta postagem?</span>
+          <Button $size="sm" onClick={remove} disabled={busy}>Excluir</Button>
+          <Button $size="sm" $variant="outline" onClick={() => setConfirming(false)} disabled={busy}>Cancelar</Button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button $size="sm" $variant="outline" onClick={() => setEditing(true)}><Pencil size={16} /> Editar</Button>
+          <Button $size="sm" $variant="outline" onClick={() => setConfirming(true)}><Trash2 size={16} /> Excluir</Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function ProfileDetail() {
   const { handle = '' } = useParams()
   const navigate = useNavigate()
@@ -256,7 +318,7 @@ export default function ProfileDetail() {
     )
   }
 
-  const isOwner = user?.handle === profile.handle
+  const isOwner = !!user && normalizeHandle(user.handle) === normalizeHandle(profile.handle)
   const subscribed = isSubscribed(profile.id)
   const subscription = user?.subscriptions.find(s => s.profileId === profile.id)
   const isSigned = subscribed || !!profile.signed
@@ -400,7 +462,26 @@ export default function ProfileDetail() {
 
       <Modal open={!!viewing} onClose={() => setViewing(null)} label="Visualizar mídia" width={720}>
         {viewing && (
-          <MediaViewer media={viewing} description={mockDescription(viewing.id)} />
+          <MediaViewer
+            key={viewing.id}
+            media={viewing}
+            description={mockDescription(viewing.id)}
+            footer={
+              isOwner && (
+                <OwnerActions
+                  media={viewing}
+                  onSaved={m => {
+                    setProfile(p => p && { ...p, media: p.media.map(x => (x.id === m.id ? { ...x, caption: m.caption, paid: m.paid } : x)) })
+                    setViewing(m)
+                  }}
+                  onDeleted={() => {
+                    setProfile(p => p && { ...p, media: p.media.filter(x => x.id !== viewing.id) })
+                    setViewing(null)
+                  }}
+                />
+              )
+            }
+          />
         )}
       </Modal>
     </Wrap>

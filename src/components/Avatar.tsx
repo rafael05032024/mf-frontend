@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { initials } from '../utils/format'
 
@@ -27,9 +28,12 @@ interface Props {
 }
 
 export function Avatar({ name, src, size = 40, ring, className }: Props) {
+  const [failed, setFailed] = useState(false)
+  useEffect(() => setFailed(false), [src])
+  const showImg = !!src && !failed
   return (
-    <Wrap $size={size} $ring={ring} className={className} aria-hidden={!src}>
-      {src ? <img src={src} alt={`Foto de ${name}`} loading="lazy" /> : initials(name)}
+    <Wrap $size={size} $ring={ring} className={className} aria-hidden={!showImg}>
+      {showImg ? <img src={src} alt={`Foto de ${name}`} loading="lazy" onError={() => setFailed(true)} /> : initials(name)}
     </Wrap>
   )
 }

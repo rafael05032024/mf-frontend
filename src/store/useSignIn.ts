@@ -8,7 +8,7 @@ type Result = { ok: true } | { ok: false; error: string }
 // Login via API (gera e salva o token JWT) + sessão local do app.
 // Identificadores que não são e-mail (@perfil) e as contas de demonstração usam só a base local.
 export function useSignIn() {
-  const { login, register, handleAvailable, applyVerified } = useApp()
+  const { login, register, handleAvailable, applyVerified, applyProfile } = useApp()
 
   return useCallback(
     async (identifier: string, password: string): Promise<Result> => {
@@ -19,8 +19,11 @@ export function useSignIn() {
       }
 
       let verified = false
+      let profile: string | undefined
+      let name: string | undefined
+      let avatar: string | undefined
       try {
-        verified = (await loginRequest(id, password)).verified
+        ({ verified, profile, name, avatar } = await loginRequest(id, password))
       } catch {
         // API recusou ou indisponível: tenta a base local (ex.: contas de demonstração)
         setToken(null)
@@ -30,17 +33,23 @@ export function useSignIn() {
       const local = login(id, password)
       if (local.ok) {
         applyVerified(id, verified)
+        if (profile) applyProfile(id, profile, { name, avatar })
         return local
       }
 
       // Conta existe na API, mas não neste navegador: cria a sessão local
-      const base = normalizeHandle(id.split('@')[0]).slice(0, 16) || 'usuario'
+      const base = normalizeHandle(profile ?? id.split('@')[0]).slice(0, 16) || 'usuario'
       let handle = base.length >= 3 ? base : base.padEnd(3, '_')
-      for (let n = 1; !handleAvailable(handle); n++) handle = `${base}${n}`.slice(0, 20)
-      const created = register({ name: id.split('@')[0], email: id, handle, password })
-      if (created.ok) applyVerified(id, verified)
+      // o perfil vem da API e é a identidade real: não é alterado, mesmo que o nome já exista localmente
+      if (profile) handle = profile
+      else for (let n = 1; !handleAvailable(handle); n++) handle = `${base}${n}`.slice(0, 20)
+      const created = register({ name: name ?? id.split('@')[0], email: id, handle, password })
+      if (created.ok) {
+        applyVerified(id, verified)
+        if (profile) applyProfile(id, profile, { name, avatar })
+      }
       return created
     },
-    [login, register, handleAvailable, applyVerified],
+    [login, register, handleAvailable, applyVerified, applyProfile],
   )
 }

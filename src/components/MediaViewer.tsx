@@ -1,4 +1,4 @@
-import { useEffect, useState, type PointerEvent } from 'react'
+import { useEffect, useState, type PointerEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Maximize2, Minimize2, ZoomIn, ZoomOut } from 'lucide-react'
 import styled from 'styled-components'
@@ -40,8 +40,8 @@ const Backdrop = styled.img`
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: blur(28px) brightness(0.7);
-  transform: scale(1.3);
+  filter: blur(12px) brightness(0.7);
+  transform: scale(1.15);
   pointer-events: none;
 `
 
@@ -103,9 +103,10 @@ const ZOOM = 2.5
 interface Props {
   media: Media
   description: string
+  footer?: ReactNode
 }
 
-export function MediaViewer({ media, description }: Props) {
+export function MediaViewer({ media, description, footer }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [zoomed, setZoomed] = useState(false)
   const [origin, setOrigin] = useState('50% 50%')
@@ -188,6 +189,7 @@ export function MediaViewer({ media, description }: Props) {
       <figcaption>
         {media.caption}
         <p>{description}</p>
+        {footer}
       </figcaption>
     </Figure>
   )

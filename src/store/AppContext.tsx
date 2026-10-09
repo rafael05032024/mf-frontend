@@ -42,6 +42,8 @@ interface AppState {
   handleAvailable: (handle: string) => boolean
   /** Aplica o flag `verified` do login: true exibe a plataforma na visão de publicador */
   applyVerified: (email: string, verified: boolean) => void
+  /** Sincroniza o @ da conta local com o perfil retornado pela API no login */
+  applyProfile: (email: string, profile: string, extra?: { name?: string; avatar?: string }) => void
 }
 
 const AppContext = createContext<AppState | null>(null)
@@ -171,6 +173,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAccounts(prev => [...prev, u])
     setSessionId(u.id)
     return { ok: true }
+  }
+
+  const applyProfile: AppState['applyProfile'] = (email, profile, extra) => {
+    const id = email.trim().toLowerCase()
+    const handle = normalizeHandle(profile)
+    setAccounts(prev =>
+      prev.map(a => {
+        if (a.email.toLowerCase() !== id) return a
+        const creator = a.creator && extra ? { ...a.creator, avatar: extra.avatar ?? '' } : a.creator
+        return { ...a, handle, name: extra?.name || a.name, creator }
+      }),
+    )
   }
 
   const applyVerified: AppState['applyVerified'] = (email, verified) => {
@@ -347,6 +361,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     markNotificationsRead,
     handleAvailable,
     applyVerified,
+    applyProfile,
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
