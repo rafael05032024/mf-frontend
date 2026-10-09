@@ -24,8 +24,9 @@ const Panel = styled.div<{ $width: number }>`
   position: relative;
   width: 100%;
   max-width: ${({ $width }) => $width}px;
-  max-height: 92dvh;
-  overflow-y: auto;
+  max-height: calc(96dvh / var(--ui-zoom, 1));
+  display: flex;
+  flex-direction: column;
   background: ${({ theme }) => theme.colors.white};
   border-radius: ${({ theme }) => theme.radius.lg} ${({ theme }) => theme.radius.lg} 0 0;
   box-shadow: ${({ theme }) => theme.shadow.lg};
@@ -33,6 +34,13 @@ const Panel = styled.div<{ $width: number }>`
   animation: ${rise} 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
   &:focus { outline: none; }
   ${mq.sm} { border-radius: ${({ theme }) => theme.radius.lg}; }
+`
+
+const Scroll = styled.div`
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border-radius: inherit;
 `
 
 const Close = styled(IconButton)`
@@ -103,7 +111,7 @@ export function Modal({ open, onClose, label, children, width = 440, hideClose }
             <X size={20} />
           </Close>
         )}
-        {children}
+        <Scroll>{children}</Scroll>
       </Panel>
     </Backdrop>,
     document.body,

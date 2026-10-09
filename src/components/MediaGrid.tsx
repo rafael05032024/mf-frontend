@@ -24,14 +24,14 @@ const Tile = styled.button<{ $locked: boolean }>`
   background: ${({ theme }) => theme.colors.light};
   border-radius: 4px;
   ${mq.md} { border-radius: ${({ theme }) => theme.radius.sm}; }
-  img {
+  img, video {
     width: 100%;
     height: 100%;
     object-fit: cover;
     transition: transform 0.3s ease;
     ${({ $locked }) => $locked && 'filter: blur(14px) brightness(.85); transform: scale(1.15);'}
   }
-  &:hover img { ${({ $locked }) => !$locked && 'transform: scale(1.05);'} }
+  &:hover img, &:hover video { ${({ $locked }) => !$locked && 'transform: scale(1.05);'} }
 `
 
 const Overlay = styled.span`
@@ -65,6 +65,22 @@ const Badge = styled.span`
   font-weight: 600;
 `
 
+const PlayButton = styled.span`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  color: ${({ theme }) => theme.colors.white};
+  svg { margin-left: 2px; }
+  ${mq.md} { width: 44px; height: 44px; }
+`
+
 interface Props {
   media: Media[]
   isLocked: (m: Media) => boolean
@@ -79,19 +95,24 @@ export function MediaGrid({ media, isLocked, onOpen }: Props) {
         const kind = m.type === 'video' ? 'Vídeo' : 'Foto'
         return (
           <li key={m.id}>
-            <Tile $locked={locked} onClick={() => onOpen(m)} aria-label={locked ? `${kind} exclusivo para assinantes` : `Abrir ${kind.toLowerCase()}: ${m.caption}`}>
-              <img src={m.url} alt="" loading="lazy" />
+            <Tile $locked={locked} onClick={() => onOpen(m)} aria-label={locked ? `${kind} exclusivo para assinantes` : `Abrir ${kind.toLowerCase()}${m.caption ? `: ${m.caption}` : ''}`}>
+              {m.type === 'video' && m.url.includes('/api/') ? (
+                <video src={`${m.url}#t=0.1`} preload="metadata" muted playsInline />
+              ) : (
+                <img src={m.url} alt="" loading="lazy" />
+              )}
               {locked && (
                 <Overlay>
                   <Lock size={22} aria-hidden />
                   <small>Assinantes</small>
                 </Overlay>
               )}
-              {m.type === 'video' && (
-                <Badge aria-hidden>
-                  <Play size={10} fill="currentColor" /> {m.duration}
-                </Badge>
+              {m.type === 'video' && !locked && (
+                <PlayButton aria-hidden>
+                  <Play size={18} fill="currentColor" strokeWidth={0} />
+                </PlayButton>
               )}
+              {m.type === 'video' && m.duration && <Badge aria-hidden>{m.duration}</Badge>}
             </Tile>
           </li>
         )

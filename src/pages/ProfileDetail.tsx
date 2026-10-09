@@ -1,17 +1,20 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, CalendarCheck, Image as ImageIcon, Lock, Pencil, Plus, Video } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
+import { getProfile, ApiError } from '../api'
+import { PageLoader } from '../components/PageLoader'
 import { Avatar } from '../components/Avatar'
 import { InstagramIcon, TikTokIcon, VerifiedBadge } from '../components/icons'
 import { MediaGrid } from '../components/MediaGrid'
 import { LoginModal } from '../components/LoginModal'
+import { MediaViewer } from '../components/MediaViewer'
 import { Modal } from '../components/Modal'
 import { SubscribeModal, SuccessModal } from '../components/SubscribeModals'
 import { Button, Container, Muted, Title } from '../components/ui'
 import { useApp } from '../store/AppContext'
 import { mq } from '../styles/theme'
-import type { Media, MediaType } from '../types'
+import type { Media, MediaType, Profile } from '../types'
 import { brlToFt, formatDate, formatFt } from '../utils/format'
 
 const Wrap = styled(Container)`
@@ -178,12 +181,15 @@ const Tab = styled.button<{ $active: boolean }>`
   ${mq.md} { flex: 0 0 auto; }
 `
 
-const Viewer = styled.figure`
-  margin: 0;
-  img { width: 100%; max-height: 72dvh; object-fit: contain; background: ${({ theme }) => theme.colors.black}; }
-  figcaption { padding: 14px 20px 20px; font-size: 15px; }
-  small { display: block; color: ${({ theme }) => theme.colors.grayText}; margin-top: 4px; }
-`
+// TODO: substituir pela descrição real quando a API a fornecer
+const MOCK_DESCRIPTIONS = [
+  'Bom dia, amores! ☀️ Acordei com vontade de compartilhar esse momento com vocês 💕',
+  'Um pedacinho do meu dia que eu não podia deixar de mostrar 😘🔥 Me conta o que acharam!',
+  'Domingo é dia de relaxar 🌸✨ Quem mais está curtindo o descanso? 😴💖',
+  'Preparei algo especial pra vocês hoje 😈🎁 Não esqueçam de deixar o feedback 👇',
+]
+const mockDescription = (id: string) =>
+  MOCK_DESCRIPTIONS[[...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % MOCK_DESCRIPTIONS.length]
 
 const Empty = styled.div`
   text-align: center;
@@ -202,8 +208,10 @@ const FILTERS: { key: Filter; label: string }[] = [
 export default function ProfileDetail() {
   const { handle = '' } = useParams()
   const navigate = useNavigate()
-  const { getProfile, user, isSubscribed, subscribe } = useApp()
-  const profile = getProfile(handle)
+  const { user, isSubscribed, subscribe } = useApp()
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [filter, setFilter] = useState<Filter>('all')
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
@@ -211,30 +219,47 @@ export default function ProfileDetail() {
   const [viewing, setViewing] = useState<Media | null>(null)
   const closeSuccess = useCallback(() => setSuccessOpen(false), [])
 
+  useEffect(() => {
+    let active = true
+    setLoading(true)
+    setError('')
+    getProfile(handle)
+      .then(p => active && setProfile(p))
+      .catch(e => {
+        if (!active) return
+        setProfile(null)
+        setError(e instanceof ApiError && e.status === 404 ? '' : e instanceof Error ? e.message : 'Erro ao carregar perfil')
+      })
+      .finally(() => active && setLoading(false))
+    return () => { active = false }
+  }, [handle, user?.id]) // recarrega ao logar/deslogar (token muda)
+
   const media = useMemo(
     () => (profile ? (filter === 'all' ? profile.media : profile.media.filter(m => m.type === filter)) : []),
     [profile, filter],
   )
 
+  if (loading) return <PageLoader />
+
   if (!profile) {
     return (
       <Container>
         <Empty>
-          <Title>Perfil não encontrado</Title>
-          <Muted style={{ margin: '8px 0 20px' }}>O perfil @{handle} não existe ou foi removido.</Muted>
+          <Title>{error ? 'Não foi possível carregar' : 'Perfil não encontrado'}</Title>
+          <Muted style={{ margin: '8px 0 20px' }}>{error || `O perfil @${handle} não existe ou foi removido.`}</Muted>
           <Button onClick={() => navigate('/')}>Voltar ao início</Button>
         </Empty>
       </Container>
     )
   }
 
-  const isOwner = user?.id === profile.id
+  const isOwner = user?.handle === profile.handle
   const subscribed = isSubscribed(profile.id)
   const subscription = user?.subscriptions.find(s => s.profileId === profile.id)
   const canSee = isOwner || subscribed
-  const photos = profile.media.filter(m => m.type === 'photo').length
-  const videos = profile.media.length - photos
-  const priv = profile.media.filter(m => m.paid).length
+  const photos = profile.counters?.photos ?? profile.media.filter(m => m.type === 'photo').length
+  const videos = profile.counters?.videos ?? profile.media.length - photos
+  const priv = profile.counters?.private ?? profile.media.filter(m => m.paid).length
 
   const askSubscribe = () => (user ? setConfirmOpen(true) : setLoginOpen(true))
 
@@ -350,16 +375,7 @@ export default function ProfileDetail() {
 
       <Modal open={!!viewing} onClose={() => setViewing(null)} label="Visualizar mídia" width={720}>
         {viewing && (
-          <Viewer>
-            <img src={viewing.url} alt={viewing.caption} />
-            <figcaption>
-              {viewing.caption}
-              <small>
-                {viewing.type === 'video' ? `Vídeo · ${viewing.duration}` : 'Foto'} · {formatDate(viewing.createdAt)}
-                {viewing.paid && ' · Exclusivo'}
-              </small>
-            </figcaption>
-          </Viewer>
+          <MediaViewer media={viewing} description={mockDescription(viewing.id)} />
         )}
       </Modal>
     </Wrap>

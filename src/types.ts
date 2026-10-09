@@ -22,6 +22,7 @@ export interface Profile {
   tiktok?: string
   priceBRL: number
   featured?: boolean
+  counters?: { photos: number; videos: number; private: number }
   media: Media[]
 }
 
