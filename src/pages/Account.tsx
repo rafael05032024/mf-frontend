@@ -125,7 +125,7 @@ export default function Account() {
             subtitle={activeSubs === null ? '...' : activeSubs === 1 ? '1 assinatura ativa' : `${activeSubs} assinaturas ativas`}
             to="/conta/assinaturas"
           />
-          <ActionItem icon={<UserPen size={20} />} title="Alterar dados do perfil" to="/conta/editar" />
+          <ActionItem icon={<UserPen size={20} />} title="Editar perfil" to="/conta/editar" />
         </List>
 
         <List>

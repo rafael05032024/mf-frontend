@@ -36,6 +36,7 @@ const Range = styled.input`
 
 interface Props {
   label: string
+  hideLabel?: boolean
   value: string
   onChange: (v: string) => void
   error?: string
@@ -44,11 +45,11 @@ interface Props {
   whole?: boolean
 }
 
-export function AmountPicker({ label, value, onChange, error, presets = [15, 30, 50, 100, 150], whole }: Props) {
+export function AmountPicker({ label, hideLabel, value, onChange, error, presets = [15, 30, 50, 100, 150], whole }: Props) {
   const num = Number(value.replace(',', '.'))
   return (
     <>
-      <Field label={label} error={error} hint={`Entre R$ ${MIN_BRL},00 e R$ ${MAX_BRL},00`}>
+      <Field label={label} hideLabel={hideLabel} error={error} hint={`Entre R$ ${MIN_BRL},00 e R$ ${MAX_BRL},00`}>
         <MoneyInput value={value} onChange={onChange} whole={whole} />
       </Field>
       <Range

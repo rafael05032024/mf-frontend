@@ -179,7 +179,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             bio: '',
             avatar: '',
             cover: '',
-            stats: { monthly: [], pendingFt: 0 },
+            stats: buildStats(a.email, 29.9), // dados mockados até a API fornecer métricas
           },
         }
       }),

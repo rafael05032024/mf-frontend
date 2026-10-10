@@ -27,6 +27,8 @@ export interface Me {
   cover_photo?: string | null
   balance: number
   subscriptions: number
+  /** Valor da assinatura do publicador, em reais */
+  plan_value?: number | null
   verified?: boolean
 }
 
@@ -79,6 +81,11 @@ export const uploadCover = (dataUrl: string) => uploadImage('/api/accounts/me/co
 /** Cria o plano de assinatura. `value` em reais */
 export function createPlan(value: number) {
   return api.post<unknown>('/api/plans', { value })
+}
+
+/** Atualiza o valor do plano de assinatura. `value` em reais */
+export function updatePlan(value: number) {
+  return api.put<void>('/api/plans', { value })
 }
 
 /** Inicia a sessão de verificação de documento; retorna o link do provedor externo (exibido como QRCode) */

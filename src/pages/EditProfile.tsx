@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { AmountPicker, parseBRL, validateBRL } from '../components/AmountPicker'
 import { EmojiTextarea } from '../components/EmojiTextarea'
 import { Field } from '../components/Field'
 import { ImageUpload } from '../components/ImageUpload'
@@ -50,20 +49,18 @@ export default function EditProfile() {
     bio: user.creator?.bio ?? '',
     avatar: user.creator?.avatar ?? '',
     cover: user.creator?.cover ?? '',
-    price: String(user.creator?.priceBRL ?? ''),
   })
-  const [errors, setErrors] = useState<{ name?: string; price?: string }>({})
+  const [errors, setErrors] = useState<{ name?: string }>({})
   const [formError, setFormError] = useState('')
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
     const er: typeof errors = {}
     if (form.name.trim().length < 2) er.name = 'Informe um nome.'
-    if (isCreator) er.price = validateBRL(form.price, true)
     Object.keys(er).forEach(k => er[k as keyof typeof er] || delete er[k as keyof typeof er])
     setErrors(er)
     if (Object.keys(er).length) return
-    const r = updateProfile(isCreator ? { ...form, priceBRL: parseBRL(form.price) } : { name: form.name, handle: form.handle })
+    const r = updateProfile(isCreator ? form : { name: form.name, handle: form.handle })
     if (!r.ok) return setFormError(r.error)
     toast({ title: 'Dados atualizados', tone: 'success' })
     navigate('/conta')
@@ -75,7 +72,7 @@ export default function EditProfile() {
 
   return (
     <NarrowContainer>
-      <PageHeader title="Alterar dados" back="/conta" />
+      <PageHeader title="Editar Perfil" back="/conta" />
       <form onSubmit={submit} noValidate>
         <Stack $gap={16}>
           {formError && <Alert $tone="danger" role="alert"><AlertCircle size={18} /> {formError}</Alert>}
@@ -108,16 +105,6 @@ export default function EditProfile() {
                   <Input value={value} readOnly aria-readonly="true" />
                 </Field>
               ))}
-              {isCreator && (
-                <AmountPicker
-                  label="Valor da assinatura (mensal)"
-                  value={form.price}
-                  onChange={price => { setForm(f => ({ ...f, price })); setErrors(e => ({ ...e, price: undefined })) }}
-                  error={errors.price}
-                  presets={[15, 20, 30, 50, 100, 150]}
-                  whole
-                />
-              )}
             </Stack>
           </Card>
 
