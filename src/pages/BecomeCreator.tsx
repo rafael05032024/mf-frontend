@@ -1,5 +1,5 @@
 import { cloneElement, useEffect, useRef, useState } from 'react'
-import { AtSign, Clock } from 'lucide-react'
+import { AtSign, Clock, ExternalLink } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -23,7 +23,7 @@ const STEPS = [
   { title: 'Capa e biografia', desc: 'Capriche: é a primeira impressão do seu perfil.' },
   { title: 'Redes sociais', desc: 'Opcional. Ajuda seus seguidores a te encontrarem.' },
   { title: 'Valor da assinatura', desc: 'Quanto seus assinantes pagarão por mês.' },
-  { title: 'Verificação de documento', desc: 'Escaneie o QRCode com o celular para verificar seu documento.' },
+  { title: 'Verificação de documentos', desc: 'Escaneie o QRCode com o celular ou abra o link neste aparelho para verificar seus documentos.' },
 ]
 
 
@@ -349,7 +349,13 @@ export default function BecomeCreator() {
             <>
               <QRBox>
                 {verifyUrl ? (
-                  <div className="qr"><QRCodeSVG value={verifyUrl} size={200} /></div>
+                  <>
+                    <div className="qr"><QRCodeSVG value={verifyUrl} size={200} /></div>
+                    <Muted>Está no celular? Abra o link abaixo neste aparelho.</Muted>
+                    <Button as="a" href={verifyUrl} target="_blank" rel="noopener noreferrer" $block>
+                      <ExternalLink size={16} /> Abrir verificação
+                    </Button>
+                  </>
                 ) : (
                   <Button $variant="ghost" onClick={retryVerification} disabled={saving}>Gerar QRCode</Button>
                 )}

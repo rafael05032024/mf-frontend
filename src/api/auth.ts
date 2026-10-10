@@ -88,7 +88,7 @@ export function updatePlan(value: number) {
   return api.put<void>('/api/plans', { value })
 }
 
-/** Inicia a sessão de verificação de documento; retorna o link do provedor externo (exibido como QRCode) */
+/** Inicia a sessão de verificação de documentos; retorna o link do provedor externo (exibido como QRCode) */
 export async function createLiveness(): Promise<string> {
   const { verificationUrl } = await api.post<{ id: number; verificationUrl: string }>('/api/liveness')
   return verificationUrl
