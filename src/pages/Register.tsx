@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import styled from 'styled-components'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { createAccount, loginRequest } from '../api'
+import { createAccount, loginRequest, sendVerificationCode } from '../api'
 import { Modal } from '../components/Modal'
+import { CodeInput } from '../components/CodeInput'
 import { Field } from '../components/Field'
 import { PasswordInput } from '../components/PasswordInput'
 import { Alert, Button, Input, Muted, Stack, Title } from '../components/ui'
@@ -33,6 +34,10 @@ export default function Register() {
   const [errors, setErrors] = useState<Errors>({})
   const [formError, setFormError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [step, setStep] = useState<'form' | 'code'>('form')
+  const [code, setCode] = useState('')
+  const [codeError, setCodeError] = useState('')
+  const [resent, setResent] = useState(false)
   const [redirecting, setRedirecting] = useState(false)
   const [seconds, setSeconds] = useState(5)
   const timer = useRef<number>(undefined)
@@ -70,11 +75,43 @@ export default function Register() {
     setFormError('')
     setLoading(true)
     try {
-      await createAccount({ name: form.name.trim(), email: form.email.trim(), profile: form.handle, password: form.password })
+      await sendVerificationCode(form.name.trim(), form.email.trim())
+    } catch (err) {
+      setLoading(false)
+      return setFormError(err instanceof Error ? err.message : 'Não foi possível enviar o código.')
+    }
+    setLoading(false)
+    setCode('')
+    setCodeError('')
+    setStep('code')
+  }
+
+  const resend = async () => {
+    if (loading) return
+    setCodeError('')
+    setResent(false)
+    setLoading(true)
+    try {
+      await sendVerificationCode(form.name.trim(), form.email.trim())
+      setResent(true)
+    } catch (err) {
+      setCodeError(err instanceof Error ? err.message : 'Não foi possível reenviar o código.')
+    }
+    setLoading(false)
+  }
+
+  const confirm = async (e: FormEvent) => {
+    e.preventDefault()
+    if (loading || redirecting) return
+    if (!/^\d{6}$/.test(code)) return setCodeError('Digite os 6 dígitos do código.')
+    setCodeError('')
+    setLoading(true)
+    try {
+      await createAccount({ name: form.name.trim(), email: form.email.trim(), profile: form.handle, password: form.password, code })
       await loginRequest(form.email.trim(), form.password)
     } catch (err) {
       setLoading(false)
-      return setFormError(err instanceof Error ? err.message : 'Não foi possível criar a conta.')
+      return setCodeError(err instanceof Error ? err.message : 'Não foi possível criar a conta.')
     }
     setLoading(false)
     setRedirecting(true)
@@ -99,6 +136,31 @@ export default function Register() {
           </Stack>
         </div>
       </Modal>
+      {step === 'code' ? (
+        <form onSubmit={confirm} noValidate>
+          <Stack $gap={18}>
+            <div>
+              <Title>Verifique seu e-mail</Title>
+              <Muted>Enviamos um código de 6 dígitos para <b>{form.email.trim()}</b>.</Muted>
+            </div>
+            {codeError && (
+              <Alert $tone="danger" role="alert">
+                <AlertCircle size={18} /> {codeError}
+              </Alert>
+            )}
+            {resent && !codeError && <Alert $tone="success" role="status">Novo código enviado.</Alert>}
+            <Field label="Código de verificação">
+              <CodeInput value={code} onChange={v => { setCode(v); setCodeError('') }} autoFocus />
+            </Field>
+            <Button type="submit" $block $size="lg" disabled={loading || redirecting}>{loading ? 'Verificando...' : 'Confirmar e criar conta'}</Button>
+            <Muted style={{ textAlign: 'center' }}>
+              Não recebeu? <a href="#" onClick={e => { e.preventDefault(); resend() }}><b>Reenviar código</b></a>
+              {' · '}
+              <a href="#" onClick={e => { e.preventDefault(); setStep('form'); setResent(false); setCodeError('') }}><b>Voltar</b></a>
+            </Muted>
+          </Stack>
+        </form>
+      ) : (
       <form onSubmit={submit} noValidate>
         <Stack $gap={18}>
           <div>
@@ -122,12 +184,13 @@ export default function Register() {
           <Field label="Senha" error={errors.password} hint="Mínimo de 6 caracteres">
             <PasswordInput value={form.password} onChange={set('password')} autoComplete="new-password" />
           </Field>
-          <Button type="submit" $block $size="lg" disabled={loading || redirecting}>{loading ? 'Criando conta...' : 'Criar conta'}</Button>
+          <Button type="submit" $block $size="lg" disabled={loading || redirecting}>{loading ? 'Enviando código...' : 'Continuar'}</Button>
           <Muted style={{ textAlign: 'center' }}>
             Já tem conta? <Link to="/login"><b>Entrar</b></Link>
           </Muted>
         </Stack>
       </form>
+      )}
     </AuthShell>
   )
 }

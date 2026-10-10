@@ -7,6 +7,13 @@ export interface RegisterPayload {
   email: string
   profile: string
   password: string
+  /** Código de 6 dígitos enviado por e-mail */
+  code: string
+}
+
+/** Envia o código de verificação de cadastro por e-mail */
+export function sendVerificationCode(name: string, email: string) {
+  return api.post<unknown>('/api/accounts/verification-code', { name, email })
 }
 
 export function createAccount(payload: RegisterPayload) {
