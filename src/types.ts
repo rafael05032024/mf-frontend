@@ -63,6 +63,7 @@ export interface CreatorInfo {
   birthDate: string
   priceBRL: number
   bio: string
+  location?: string
   instagram?: string
   tiktok?: string
   avatar: string
@@ -90,6 +91,7 @@ export interface User {
   createdAt: string
   balanceFt: number
   creatorStatus: CreatorStatus
+  paused?: boolean
   creator?: CreatorInfo
   posts: Media[]
   subscriptions: Subscription[]

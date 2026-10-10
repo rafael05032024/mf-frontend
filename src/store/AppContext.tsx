@@ -31,7 +31,10 @@ interface AppState {
   login: (identifier: string, password: string) => Result
   register: (input: RegisterInput) => Result
   logout: () => void
-  updateProfile: (patch: Partial<Pick<User, 'name' | 'handle'>> & Partial<Pick<CreatorInfo, 'bio' | 'avatar' | 'cover' | 'priceBRL'>>) => Result
+  updateProfile: (patch: Partial<Pick<User, 'name' | 'handle'>> & Partial<Pick<CreatorInfo, 'bio' | 'location' | 'instagram' | 'tiktok' | 'avatar' | 'cover' | 'priceBRL'>>) => Result
+  changePassword: (next: string) => Result
+  setPaused: (paused: boolean) => void
+  deleteAccount: () => void
   subscribe: (profile: Profile) => Result
   recharge: (brl: number) => void
   withdraw: (ft: number) => Result
@@ -48,7 +51,7 @@ interface AppState {
 const AppContext = createContext<AppState | null>(null)
 
 export function userToProfile(u: User): Profile | undefined {
-  if (u.creatorStatus !== 'verified' || !u.creator) return undefined
+  if (u.creatorStatus !== 'verified' || !u.creator || u.paused) return undefined
   return {
     id: u.id,
     name: u.name,
@@ -204,6 +207,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ? {
             ...u.creator,
             bio: patch.bio ?? u.creator.bio,
+            location: patch.location ?? u.creator.location,
+            instagram: patch.instagram ?? u.creator.instagram,
+            tiktok: patch.tiktok ?? u.creator.tiktok,
             avatar: patch.avatar ?? u.creator.avatar,
             cover: patch.cover ?? u.creator.cover,
             priceBRL: patch.priceBRL ?? u.creator.priceBRL,
@@ -211,6 +217,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
         : u.creator,
     }))
     return { ok: true }
+  }
+
+  const changePassword: AppState['changePassword'] = next => {
+    if (!user) return { ok: false, error: 'Sessão expirada.' }
+    patchUser(user.id, u => ({ ...u, password: next }))
+    return { ok: true }
+  }
+
+  const setPaused: AppState['setPaused'] = paused => {
+    if (user) patchUser(user.id, u => ({ ...u, paused }))
+  }
+
+  const deleteAccount: AppState['deleteAccount'] = () => {
+    if (!user) return
+    setToken(null)
+    setSessionId(null)
+    setAccounts(prev => prev.filter(a => a.id !== user.id))
   }
 
   const subscribe: AppState['subscribe'] = profile => {
@@ -327,6 +350,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     register,
     logout,
     updateProfile,
+    changePassword,
+    setPaused,
+    deleteAccount,
     subscribe,
     recharge,
     withdraw,
