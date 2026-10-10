@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CalendarCheck, Image as ImageIcon, Lock, Pencil, Plus, Trash2, Video } from 'lucide-react'
+import { ArrowLeft, CalendarCheck, Image as ImageIcon, Lock, Pencil, Plus, Settings, Trash2, Video } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { deletePost, getProfile, subscribeToProfile, ApiError } from '../api'
@@ -370,7 +370,7 @@ export default function ProfileDetail() {
                 <Plus size={20} strokeWidth={2.6} /> Postar conteúdo
               </Button>
               <Button $size="lg" $variant="outline" onClick={() => navigate('/conta/editar')}>
-                <Pencil size={18} /> Editar perfil
+                <Settings size={18} /> Configurações do perfil
               </Button>
             </Actions>
           ) : isSigned ? (

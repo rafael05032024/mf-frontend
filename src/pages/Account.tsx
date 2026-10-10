@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BarChart3, CreditCard, Eye, Hourglass, ListChecks, LogOut, Sparkles, UserPen } from 'lucide-react'
+import { BarChart3, CreditCard, Eye, Hourglass, ListChecks, LogOut, Settings, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { getActiveSubscriptionsCount, getBalance } from '../api'
@@ -125,7 +125,7 @@ export default function Account() {
             subtitle={activeSubs === null ? '...' : activeSubs === 1 ? '1 assinatura ativa' : `${activeSubs} assinaturas ativas`}
             to="/conta/assinaturas"
           />
-          <ActionItem icon={<UserPen size={20} />} title="Editar perfil" to="/conta/editar" />
+          <ActionItem icon={<Settings size={20} />} title="Configurações do perfil" to="/conta/editar" />
         </List>
 
         <List>

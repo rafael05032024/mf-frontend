@@ -51,7 +51,7 @@ export default function EditProfile() {
 
   return (
     <NarrowContainer>
-      <PageHeader title="Editar Perfil" back="/conta" />
+      <PageHeader title="Configurações do perfil" back="/conta" />
       <Stack $gap={20}>
         <Head>
           {isCreator ? (
