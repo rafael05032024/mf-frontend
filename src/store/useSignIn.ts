@@ -22,8 +22,9 @@ export function useSignIn() {
       let profile: string | undefined
       let name: string | undefined
       let avatar: string | undefined
+      let cover: string | undefined
       try {
-        ({ verified, profile, name, avatar } = await loginRequest(id, password))
+        ({ verified, profile, name, avatar, cover } = await loginRequest(id, password))
       } catch {
         // API recusou ou indisponível: tenta a base local (ex.: contas de demonstração)
         setToken(null)
@@ -33,7 +34,7 @@ export function useSignIn() {
       const local = login(id, password)
       if (local.ok) {
         applyVerified(id, verified)
-        if (profile) applyProfile(id, profile, { name, avatar })
+        if (profile) applyProfile(id, profile, { name, avatar, cover })
         return local
       }
 
@@ -46,7 +47,7 @@ export function useSignIn() {
       const created = register({ name: name ?? id.split('@')[0], email: id, handle, password })
       if (created.ok) {
         applyVerified(id, verified)
-        if (profile) applyProfile(id, profile, { name, avatar })
+        if (profile) applyProfile(id, profile, { name, avatar, cover })
       }
       return created
     },

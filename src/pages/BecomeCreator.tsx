@@ -1,5 +1,5 @@
 import { cloneElement, useEffect, useRef, useState } from 'react'
-import { AtSign, Clock, ShieldCheck } from 'lucide-react'
+import { AtSign, Clock } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -12,7 +12,7 @@ import { ImageUpload } from '../components/ImageUpload'
 import { Modal } from '../components/Modal'
 import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
-import { Alert, Button, Card, Input, Muted, NarrowContainer, Stack } from '../components/ui'
+import { Button, Card, Input, Muted, NarrowContainer, Stack } from '../components/ui'
 import { useApp, useAuthedUser } from '../store/AppContext'
 import { mq } from '../styles/theme'
 import { ageFrom, brlToFt, formatFt, HANDLE_RE, isValidCPF, maskCPF, normalizeHandle } from '../utils/format'
@@ -111,7 +111,7 @@ function Prefix({ icon, children, ...aria }: { icon: React.ReactNode; children: 
 
 export default function BecomeCreator() {
   const user = useAuthedUser()
-  const { submitCreator, handleAvailable } = useApp()
+  const { handleAvailable } = useApp()
   const toast = useToast()
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
@@ -131,13 +131,11 @@ export default function BecomeCreator() {
     bio: '',
     instagram: '',
     tiktok: '',
-    price: '29.90',
+    price: '30',
   })
 
   // evita reenviar o que já foi salvo quando o usuário volta e avança de novo
   const sent = useRef<Partial<Record<string, string>>>({})
-
-  if (user.creatorStatus !== 'none') return <Navigate to="/conta" replace />
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => {
     setForm(f => ({ ...f, [k]: v }))
@@ -161,9 +159,8 @@ export default function BecomeCreator() {
     }
     if (s === 2) {
       if (!form.cover) er.cover = 'Envie uma foto de capa.'
-      if (form.bio.trim().length < 10) er.bio = 'A biografia deve ter pelo menos 10 caracteres.'
     }
-    if (s === 4) er.price = validateBRL(form.price)
+    if (s === 4) er.price = validateBRL(form.price, true)
     return Object.fromEntries(Object.entries(er).filter(([, v]) => v)) as Errors
   }
 
@@ -237,34 +234,6 @@ export default function BecomeCreator() {
     else setStep(s => s - 1)
   }
 
-  const submit = () => {
-    const r = submitCreator({
-      displayName: form.displayName,
-      handle: form.handle,
-      country: form.country,
-      cpf: form.cpf,
-      legalName: form.legalName.trim(),
-      birthDate: form.birthDate,
-      priceBRL: parseBRL(form.price),
-      bio: form.bio.trim(),
-      instagram: normalizeHandle(form.instagram) || undefined,
-      tiktok: normalizeHandle(form.tiktok) || undefined,
-      avatar: form.avatar,
-      cover: form.cover,
-    })
-    if (!r.ok) {
-      setStep(1)
-      setErrors({ handle: r.error })
-      return
-    }
-    toast({
-      title: 'Perfil em validação',
-      message: 'Estamos validando seu perfil. Você será notificado assim que for aprovado.',
-      duration: 10_000,
-    })
-    navigate('/conta')
-  }
-
   // Evento do WebSocket: documentos recebidos e em análise; avisa por 5s e vai para a página inicial
   useEffect(
     () =>
@@ -280,7 +249,10 @@ export default function BecomeCreator() {
   }, [inReview, navigate])
 
   const isLast = step === STEPS.length - 1
-  const priceValid = !validateBRL(form.price)
+  const priceValid = !validateBRL(form.price, true)
+
+  // depois de todos os hooks (um return antes deles quebra a renderização)
+  if (user.creatorStatus !== 'none') return <Navigate to="/conta" replace />
 
   return (
     <NarrowContainer>
@@ -322,7 +294,7 @@ export default function BecomeCreator() {
 
           {step === 1 && (
             <>
-              <ImageUpload label="Foto de perfil" shape="avatar" value={form.avatar} onChange={v => set('avatar', v)} error={errors.avatar} hint="Enviar" />
+              <ImageUpload label="Foto de perfil" shape="avatar" size={180} center crop value={form.avatar} onChange={v => set('avatar', v)} error={errors.avatar} hint="Enviar" />
               <Field label="Nome do perfil" error={errors.displayName} hint="Nome exibido para os fãs">
                 <Input value={form.displayName} onChange={e => set('displayName', e.target.value)} />
               </Field>
@@ -336,7 +308,7 @@ export default function BecomeCreator() {
 
           {step === 2 && (
             <>
-              <ImageUpload label="Foto de capa" shape="cover" value={form.cover} onChange={v => set('cover', v)} error={errors.cover} hint="Enviar capa (proporção 3:1)" />
+              <ImageUpload label="Foto de capa" shape="cover" crop value={form.cover} onChange={v => set('cover', v)} error={errors.cover} hint="Enviar capa (proporção 3:1)" />
               <Field label="Biografia" error={errors.bio} hint={`${form.bio.length}/500`}>
                 <EmojiTextarea
                   value={form.bio}
@@ -365,7 +337,7 @@ export default function BecomeCreator() {
 
           {step === 4 && (
             <>
-              <AmountPicker label="Valor mensal da assinatura" value={form.price} onChange={v => set('price', v)} error={errors.price} presets={[15, 19.9, 29.9, 49.9, 99.9]} />
+              <AmountPicker label="Valor mensal da assinatura" value={form.price} onChange={v => set('price', v)} error={errors.price} presets={[15, 20, 30, 50, 100, 150]} whole />
               <PriceSummary>
                 <span>Seus assinantes pagarão</span>
                 <strong>{priceValid ? `${formatFt(brlToFt(parseBRL(form.price)))}/mês` : '—'}</strong>
@@ -381,22 +353,13 @@ export default function BecomeCreator() {
                 ) : (
                   <Button $variant="ghost" onClick={retryVerification} disabled={saving}>Gerar QRCode</Button>
                 )}
-                <Muted>Abra a câmera do celular, escaneie o código e siga as instruções do provedor de verificação.</Muted>
               </QRBox>
-              <Alert $tone="info">
-                <ShieldCheck size={18} />
-                A verificação é feita por um provedor externo; seus documentos nunca ficam visíveis no seu perfil.
-              </Alert>
             </>
           )}
 
           <Nav>
             <Button $variant="ghost" onClick={back}>{step === 0 ? 'Cancelar' : 'Voltar'}</Button>
-            {!isLast ? (
-              <Button onClick={next} $block disabled={saving}>{saving ? 'Salvando…' : 'Próximo'}</Button>
-            ) : (
-              <Button onClick={submit} $block disabled={!verifyUrl}>Encaminhar para validação</Button>
-            )}
+            {!isLast && <Button onClick={next} $block disabled={saving}>{saving ? 'Salvando…' : 'Próximo'}</Button>}
           </Nav>
         </Stack>
       </Card>

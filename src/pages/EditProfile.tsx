@@ -1,19 +1,32 @@
 import { useState, type FormEvent } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { AmountPicker, parseBRL, validateBRL } from '../components/AmountPicker'
 import { EmojiTextarea } from '../components/EmojiTextarea'
 import { Field } from '../components/Field'
 import { ImageUpload } from '../components/ImageUpload'
 import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 import styled from 'styled-components'
-import { Alert, Button, Card, Input, NarrowContainer, Stack } from '../components/ui'
+import { Alert, Button, Card, Input, Muted, NarrowContainer, Stack } from '../components/ui'
 import { useApp, useAuthedUser } from '../store/AppContext'
-import { formatBRL, formatDate, HANDLE_RE, normalizeHandle } from '../utils/format'
 
 const Images = styled.div`
   position: relative;
   margin-bottom: 56px;
+`
+
+const HandleText = styled.div`
+  position: absolute;
+  left: 132px;
+  right: 8px;
+  bottom: -26px;
+  font-weight: 400;
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.grayText};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `
 
 const AvatarSlot = styled.div`
@@ -27,7 +40,7 @@ const AvatarSlot = styled.div`
 
 export default function EditProfile() {
   const user = useAuthedUser()
-  const { updateProfile, handleAvailable } = useApp()
+  const { updateProfile } = useApp()
   const toast = useToast()
   const navigate = useNavigate()
   const isCreator = user.creatorStatus === 'verified' && !!user.creator
@@ -37,20 +50,20 @@ export default function EditProfile() {
     bio: user.creator?.bio ?? '',
     avatar: user.creator?.avatar ?? '',
     cover: user.creator?.cover ?? '',
+    price: String(user.creator?.priceBRL ?? ''),
   })
-  const [errors, setErrors] = useState<{ name?: string; handle?: string; bio?: string }>({})
+  const [errors, setErrors] = useState<{ name?: string; price?: string }>({})
   const [formError, setFormError] = useState('')
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
     const er: typeof errors = {}
     if (form.name.trim().length < 2) er.name = 'Informe um nome.'
-    if (!HANDLE_RE.test(form.handle)) er.handle = 'Use 3 a 20 caracteres: letras minúsculas, números, "." ou "_".'
-    else if (form.handle !== user.handle && !handleAvailable(form.handle)) er.handle = 'Este perfil já está em uso.'
-    if (isCreator && form.bio.trim().length < 10) er.bio = 'A biografia deve ter pelo menos 10 caracteres.'
+    if (isCreator) er.price = validateBRL(form.price, true)
+    Object.keys(er).forEach(k => er[k as keyof typeof er] || delete er[k as keyof typeof er])
     setErrors(er)
     if (Object.keys(er).length) return
-    const r = updateProfile(isCreator ? form : { name: form.name, handle: form.handle })
+    const r = updateProfile(isCreator ? { ...form, priceBRL: parseBRL(form.price) } : { name: form.name, handle: form.handle })
     if (!r.ok) return setFormError(r.error)
     toast({ title: 'Dados atualizados', tone: 'success' })
     navigate('/conta')
@@ -58,17 +71,7 @@ export default function EditProfile() {
 
   const readonly: [string, string][] = [
     ['E-mail', user.email],
-    ['Membro desde', formatDate(user.createdAt)],
   ]
-  if (isCreator && user.creator) {
-    readonly.push(
-      ['Nome completo', user.creator.legalName],
-      ['CPF', user.creator.cpf],
-      ['País', user.creator.country],
-      ['Data de nascimento', formatDate(user.creator.birthDate + 'T12:00:00')],
-      ['Valor da assinatura', `${formatBRL(user.creator.priceBRL)}/mês`],
-    )
-  }
 
   return (
     <NarrowContainer>
@@ -80,24 +83,23 @@ export default function EditProfile() {
           {isCreator && (
             <Card>
               <Images>
-                <ImageUpload hideLabel label="Foto de capa" shape="cover" value={form.cover} onChange={cover => setForm(f => ({ ...f, cover }))} />
+                <ImageUpload hideLabel label="Foto de capa" shape="cover" crop value={form.cover} onChange={cover => setForm(f => ({ ...f, cover }))} />
                 <AvatarSlot>
-                  <ImageUpload hideLabel label="Foto de perfil" shape="avatar" value={form.avatar} onChange={avatar => setForm(f => ({ ...f, avatar }))} />
+                  <ImageUpload hideLabel label="Foto de perfil" shape="avatar" crop value={form.avatar} onChange={avatar => setForm(f => ({ ...f, avatar }))} />
                 </AvatarSlot>
+                <HandleText>@{user.handle}</HandleText>
               </Images>
             </Card>
           )}
 
           <Card>
             <Stack>
+              {!isCreator && <Muted>@{user.handle}</Muted>}
               <Field label={isCreator ? 'Nome do perfil' : 'Nome'} error={errors.name}>
                 <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} autoComplete="name" />
               </Field>
-              <Field label={isCreator ? 'Identificador na plataforma' : 'Nome de perfil'} error={errors.handle} hint="Seu @ na plataforma">
-                <Input value={form.handle} onChange={e => setForm(f => ({ ...f, handle: normalizeHandle(e.target.value) }))} autoCapitalize="none" />
-              </Field>
               {isCreator && (
-                <Field label="Biografia" error={errors.bio} hint={`${form.bio.length}/500`}>
+                <Field label="Biografia" hint={`${form.bio.length}/500`}>
                   <EmojiTextarea value={form.bio} maxLength={500} onChange={bio => setForm(f => ({ ...f, bio }))} />
                 </Field>
               )}
@@ -106,6 +108,16 @@ export default function EditProfile() {
                   <Input value={value} readOnly aria-readonly="true" />
                 </Field>
               ))}
+              {isCreator && (
+                <AmountPicker
+                  label="Valor da assinatura (mensal)"
+                  value={form.price}
+                  onChange={price => { setForm(f => ({ ...f, price })); setErrors(e => ({ ...e, price: undefined })) }}
+                  error={errors.price}
+                  presets={[15, 20, 30, 50, 100, 150]}
+                  whole
+                />
+              )}
             </Stack>
           </Card>
 

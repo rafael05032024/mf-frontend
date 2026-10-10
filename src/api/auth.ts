@@ -24,6 +24,7 @@ export interface Me {
   name: string
   profile: string
   thumb: string | null
+  cover_photo?: string | null
   balance: number
   subscriptions: number
   verified?: boolean
@@ -38,7 +39,7 @@ export async function login(email: string, password: string) {
   setToken(token)
   // perfil (@), nome e flag de publicador (verified) vêm de /accounts/me; falha aqui não deve impedir o login
   const me = await getMe().catch(() => undefined)
-  return { token, verified: me?.verified === true, profile: me?.profile.replace(/^@/, ''), name: me?.name, avatar: mediaUrl(me?.thumb) }
+  return { token, verified: me?.verified === true, profile: me?.profile.replace(/^@/, ''), name: me?.name, avatar: mediaUrl(me?.thumb), cover: mediaUrl(me?.cover_photo) }
 }
 
 export interface UpdateMePayload {
@@ -48,8 +49,8 @@ export interface UpdateMePayload {
   name?: string
   profile?: string
   description?: string
-  instagram?: string
-  tiktok?: string
+  instagram?: string | null
+  tiktok?: string | null
 }
 
 /** Atualização parcial dos dados da conta (cada etapa do cadastro de criador envia só os seus campos) */

@@ -1,5 +1,5 @@
 import { connectEvents, getToken, setToken } from '../api'
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { mockProfiles } from '../data/mock'
 import type { CreatorInfo, Media, Profile, User } from '../types'
 import { addDays, brlToFt, formatBRL, formatFt, HANDLE_RE, normalizeHandle, uid } from '../utils/format'
@@ -8,7 +8,6 @@ import { load, save } from './storage'
 
 const ACCOUNTS_KEY = 'myfoot:accounts'
 const SESSION_KEY = 'myfoot:session'
-const VALIDATION_MS = 10_000
 
 type Result = { ok: true } | { ok: false; error: string }
 
@@ -32,7 +31,7 @@ interface AppState {
   login: (identifier: string, password: string) => Result
   register: (input: RegisterInput) => Result
   logout: () => void
-  updateProfile: (patch: Partial<Pick<User, 'name' | 'handle'>> & Partial<Pick<CreatorInfo, 'bio' | 'avatar' | 'cover'>>) => Result
+  updateProfile: (patch: Partial<Pick<User, 'name' | 'handle'>> & Partial<Pick<CreatorInfo, 'bio' | 'avatar' | 'cover' | 'priceBRL'>>) => Result
   subscribe: (profile: Profile) => Result
   recharge: (brl: number) => void
   withdraw: (ft: number) => Result
@@ -43,7 +42,7 @@ interface AppState {
   /** Aplica o flag `verified` do login: true exibe a plataforma na visão de publicador */
   applyVerified: (email: string, verified: boolean) => void
   /** Sincroniza o @ da conta local com o perfil retornado pela API no login */
-  applyProfile: (email: string, profile: string, extra?: { name?: string; avatar?: string }) => void
+  applyProfile: (email: string, profile: string, extra?: { name?: string; avatar?: string; cover?: string }) => void
 }
 
 const AppContext = createContext<AppState | null>(null)
@@ -68,7 +67,6 @@ export function userToProfile(u: User): Profile | undefined {
 export function AppProvider({ children }: { children: ReactNode }) {
   const [accounts, setAccounts] = useState<User[]>(() => load<User[] | null>(ACCOUNTS_KEY, null) ?? seedAccounts())
   const [sessionId, setSessionId] = useState<string | null>(() => load<string | null>(SESSION_KEY, null))
-  const timers = useRef<Record<string, number>>({})
 
   useEffect(() => {
     save(ACCOUNTS_KEY, accounts)
@@ -89,39 +87,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const patchUser = useCallback((id: string, fn: (u: User) => User) => {
     setAccounts(prev => prev.map(a => (a.id === id ? fn(a) : a)))
   }, [])
-
-  // Simula a aprovação da validação do criador após o aviso de 10s
-  const scheduleVerification = useCallback(
-    (id: string, delay: number) => {
-      if (timers.current[id]) return
-      timers.current[id] = window.setTimeout(() => {
-        delete timers.current[id]
-        patchUser(id, u =>
-          u.creatorStatus !== 'pending'
-            ? u
-            : {
-                ...u,
-                creatorStatus: 'verified',
-                notifications: [
-                  {
-                    id: uid(),
-                    message: 'Parabéns! Seu perfil de criador foi verificado. Você já pode postar.',
-                    date: new Date().toISOString(),
-                    read: false,
-                    link: '/conta',
-                  },
-                  ...u.notifications,
-                ],
-              },
-        )
-      }, delay)
-    },
-    [patchUser],
-  )
-
-  useEffect(() => {
-    accounts.filter(a => a.creatorStatus === 'pending').forEach(a => scheduleVerification(a.id, VALIDATION_MS))
-  }, [accounts, scheduleVerification])
 
   const profiles = useMemo(() => {
     const creators = accounts.map(userToProfile).filter((p): p is Profile => !!p)
@@ -188,18 +153,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAccounts(prev =>
       prev.map(a => {
         if (a.email.toLowerCase() !== id) return a
-        const creator = a.creator && extra ? { ...a.creator, avatar: extra.avatar ?? '' } : a.creator
+        const creator = a.creator && extra ? { ...a.creator, avatar: extra.avatar ?? '', cover: extra.cover ?? a.creator.cover } : a.creator
         return { ...a, handle, name: extra?.name || a.name, creator }
       }),
     )
   }
 
   const applyVerified: AppState['applyVerified'] = (email, verified) => {
-    if (!verified) return
     const id = email.trim().toLowerCase()
     setAccounts(prev =>
       prev.map(a => {
-        if (a.email.toLowerCase() !== id || a.creatorStatus === 'verified') return a
+        if (a.email.toLowerCase() !== id) return a
+        // /accounts/me é a fonte da verdade: perde o status de publicador se a API diz que não é verificado
+        if (!verified) return a.creatorStatus === 'none' ? a : { ...a, creatorStatus: 'none' }
+        if (a.creatorStatus === 'verified') return a
         return {
           ...a,
           creatorStatus: 'verified',
@@ -239,6 +206,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             bio: patch.bio ?? u.creator.bio,
             avatar: patch.avatar ?? u.creator.avatar,
             cover: patch.cover ?? u.creator.cover,
+            priceBRL: patch.priceBRL ?? u.creator.priceBRL,
           }
         : u.creator,
     }))
@@ -329,7 +297,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       creatorStatus: 'pending',
       creator: { ...info, stats: buildStats(handle, info.priceBRL) },
     }))
-    scheduleVerification(user.id, VALIDATION_MS)
     return { ok: true }
   }
 

@@ -3,12 +3,13 @@ import { Camera, ImagePlus, Loader2 } from 'lucide-react'
 import styled, { css, keyframes } from 'styled-components'
 import { readImage } from '../utils/files'
 import { FieldError, Label } from './ui'
+import { ImageCropper } from './ImageCropper'
 
 type Shape = 'avatar' | 'cover' | 'doc'
 
 const spin = keyframes`to { transform: rotate(360deg) }`
 
-const Drop = styled.button<{ $shape: Shape; $invalid?: boolean }>`
+const Drop = styled.button<{ $shape: Shape; $invalid?: boolean; $size?: number }>`
   position: relative;
   display: grid;
   place-items: center;
@@ -19,9 +20,9 @@ const Drop = styled.button<{ $shape: Shape; $invalid?: boolean }>`
   color: ${({ theme }) => theme.colors.grayText};
   transition: border-color .18s ease, background-color .18s ease;
   &:hover { border-color: ${({ theme }) => theme.colors.primary}; background: ${({ theme }) => theme.colors.primarySoft}; }
-  ${({ $shape, theme }) =>
+  ${({ $shape, $size, theme }) =>
     $shape === 'avatar'
-      ? css`width: 112px; height: 112px; border-radius: 50%;`
+      ? css`width: ${$size ?? 112}px; height: ${$size ?? 112}px; border-radius: 50%;`
       : $shape === 'cover'
         ? css`width: 100%; aspect-ratio: 3 / 1; border-radius: ${theme.radius.md};`
         : css`width: 100%; aspect-ratio: 4 / 3; border-radius: ${theme.radius.md};`}
@@ -53,13 +54,17 @@ interface Props {
   error?: string
   maxSize?: number
   hideLabel?: boolean
+  size?: number
+  center?: boolean
+  crop?: boolean
 }
 
-export function ImageUpload({ label, value, onChange, shape = 'doc', hint, error, maxSize, hideLabel }: Props) {
+export function ImageUpload({ label, value, onChange, shape = 'doc', hint, error, maxSize, hideLabel, size, center, crop }: Props) {
   const id = useId()
   const input = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(false)
   const [readError, setReadError] = useState('')
+  const [cropSrc, setCropSrc] = useState('')
 
   const pick = async (file?: File) => {
     if (!file) return
@@ -67,7 +72,8 @@ export function ImageUpload({ label, value, onChange, shape = 'doc', hint, error
     setReadError('')
     setLoading(true)
     try {
-      onChange(await readImage(file, maxSize ?? (shape === 'avatar' ? 400 : 1200)))
+      if (crop) setCropSrc(await readImage(file, 1600, 0.92))
+      else onChange(await readImage(file, maxSize ?? (shape === 'avatar' ? 400 : 1200)))
     } catch {
       setReadError('Não foi possível ler a imagem.')
     } finally {
@@ -77,12 +83,13 @@ export function ImageUpload({ label, value, onChange, shape = 'doc', hint, error
 
   const err = error || readError
   return (
-    <div>
+    <div style={center ? { display: 'flex', flexDirection: 'column', alignItems: 'center' } : undefined}>
       <Label as="span" id={`${id}-label`} style={hideLabel ? { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' } : undefined}>{label}</Label>
       <Drop
         type="button"
         $shape={shape}
         $invalid={!!err}
+        $size={size}
         onClick={() => input.current?.click()}
         aria-labelledby={`${id}-label`}
         aria-describedby={err ? `${id}-err` : undefined}
@@ -105,6 +112,15 @@ export function ImageUpload({ label, value, onChange, shape = 'doc', hint, error
         )}
       </Drop>
       <input ref={input} type="file" accept="image/*" hidden onChange={e => { pick(e.target.files?.[0]); e.target.value = '' }} />
+      {cropSrc && (
+        <ImageCropper
+          src={cropSrc}
+          outputSize={maxSize ?? (shape === 'avatar' ? 400 : 1200)}
+          aspect={shape === 'avatar' ? 1 : shape === 'cover' ? 3 : 4 / 3}
+          onCancel={() => setCropSrc('')}
+          onConfirm={v => { onChange(v); setCropSrc('') }}
+        />
+      )}
       {err && <FieldError id={`${id}-err`} role="alert">{err}</FieldError>}
     </div>
   )

@@ -40,14 +40,16 @@ interface Props {
   onChange: (v: string) => void
   error?: string
   presets?: number[]
+  /** aceita apenas valores inteiros (sem centavos) */
+  whole?: boolean
 }
 
-export function AmountPicker({ label, value, onChange, error, presets = [15, 30, 50, 100, 150] }: Props) {
+export function AmountPicker({ label, value, onChange, error, presets = [15, 30, 50, 100, 150], whole }: Props) {
   const num = Number(value.replace(',', '.'))
   return (
     <>
       <Field label={label} error={error} hint={`Entre R$ ${MIN_BRL},00 e R$ ${MAX_BRL},00`}>
-        <MoneyInput value={value} onChange={onChange} />
+        <MoneyInput value={value} onChange={onChange} whole={whole} />
       </Field>
       <Range
         type="range"
@@ -69,18 +71,18 @@ export function AmountPicker({ label, value, onChange, error, presets = [15, 30,
   )
 }
 
-type MoneyProps = { value: string; onChange: (v: string) => void } & Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>
+type MoneyProps = { value: string; onChange: (v: string) => void; whole?: boolean } & Omit<InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange'>
 
-function MoneyInput({ value, onChange, ...rest }: MoneyProps) {
+function MoneyInput({ value, onChange, whole, ...rest }: MoneyProps) {
   return (
     <Money>
       <span aria-hidden>R$</span>
       <Input
         {...rest}
-        inputMode="decimal"
+        inputMode={whole ? 'numeric' : 'decimal'}
         value={value}
-        onChange={e => onChange(e.target.value.replace(/[^\d,.]/g, ''))}
-        placeholder="0,00"
+        onChange={e => onChange(e.target.value.replace(whole ? /\D/g : /[^\d,.]/g, ''))}
+        placeholder={whole ? '0' : '0,00'}
       />
     </Money>
   )
@@ -91,9 +93,10 @@ export const parseBRL = (v: string) => {
   return Number.isFinite(n) ? Math.round(n * 100) / 100 : NaN
 }
 
-export const validateBRL = (v: string) => {
+export const validateBRL = (v: string, whole?: boolean) => {
   const n = parseBRL(v)
   if (!v || Number.isNaN(n)) return 'Informe um valor.'
+  if (whole && !Number.isInteger(n)) return 'Use apenas valores inteiros, sem centavos.'
   if (n < MIN_BRL || n > MAX_BRL) return `O valor deve estar entre R$ ${MIN_BRL},00 e R$ ${MAX_BRL},00.`
   return undefined
 }
