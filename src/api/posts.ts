@@ -1,10 +1,23 @@
 import { api } from './client'
 
-// Endpoints assumidos: a API identifica a mídia pelo caminho do conteúdo (`content`)
-export function deletePost(content: string): Promise<void> {
-  return api.delete<void>(`/api/posts/${encodeURIComponent(content)}`)
+/** Publica uma mídia (multipart). `is_private` = true para conteúdo pago, false para gratuito */
+export function createPost(payload: { midia: File; description: string; isPrivate: boolean }): Promise<void> {
+  const form = new FormData()
+  form.append('midia', payload.midia)
+  form.append('is_private', String(payload.isPrivate))
+  form.append('description', payload.description)
+  return api.post<void>('/api/posts', form)
 }
 
-export function updatePost(content: string, patch: { caption: string; is_private: boolean }): Promise<void> {
-  return api.patch<void>(`/api/posts/${encodeURIComponent(content)}`, patch)
+export function deletePost(id: string): Promise<void> {
+  return api.delete<void>(`/api/posts/${encodeURIComponent(id)}`)
+}
+
+/** Edita um post (multipart). `midia` é opcional: sem ela, a mídia atual é mantida */
+export function updatePost(id: string, payload: { midia?: File | null; description: string; isPrivate: boolean }): Promise<void> {
+  const form = new FormData()
+  if (payload.midia) form.append('midia', payload.midia)
+  form.append('is_private', String(payload.isPrivate))
+  form.append('description', payload.description)
+  return api.put<void>(`/api/posts/${encodeURIComponent(id)}`, form)
 }

@@ -43,7 +43,7 @@ interface ProfileDetailDTO {
   verified: boolean
   thumb: string | null
   cover_photo: string | null
-  posts: { content: string; type: 'image' | 'video'; is_private: boolean }[]
+  posts: { id: number; content: string; description: string | null; type: 'image' | 'video'; is_private: boolean }[]
   plan_value: number
   signed: boolean
   counters: { private_midias: number; images: number; videos: number }
@@ -68,10 +68,10 @@ export async function getProfile(handle: string): Promise<Profile> {
     signed: p.signed,
     counters: { photos: p.counters.images, videos: p.counters.videos, private: p.counters.private_midias },
     media: p.posts.map(m => ({
-      id: m.content,
+      id: String(m.id),
       type: m.type === 'video' ? 'video' : 'photo',
       url: mediaUrl(m.content) ?? '',
-      caption: '',
+      caption: m.description ?? '',
       paid: m.is_private,
       createdAt: '',
     })),

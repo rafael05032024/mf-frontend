@@ -102,11 +102,10 @@ const ZOOM = 2.5
 
 interface Props {
   media: Media
-  description: string
   footer?: ReactNode
 }
 
-export function MediaViewer({ media, description, footer }: Props) {
+export function MediaViewer({ media, footer }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [zoomed, setZoomed] = useState(false)
   const [origin, setOrigin] = useState('50% 50%')
@@ -187,8 +186,7 @@ export function MediaViewer({ media, description, footer }: Props) {
           document.body,
         )}
       <figcaption>
-        {media.caption}
-        <p>{description}</p>
+        {media.caption && <p>{media.caption}</p>}
         {footer}
       </figcaption>
     </Figure>

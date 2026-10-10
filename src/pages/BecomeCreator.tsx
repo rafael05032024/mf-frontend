@@ -1,14 +1,15 @@
-import { cloneElement, useRef, useState } from 'react'
-import { AtSign, ShieldCheck } from 'lucide-react'
+import { cloneElement, useEffect, useRef, useState } from 'react'
+import { AtSign, Clock, ShieldCheck } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { ApiError, createLiveness, createPlan, updateMe, uploadCover, uploadPhoto } from '../api'
+import { ApiError, createLiveness, createPlan, eventName, subscribeEvents, updateMe, uploadCover, uploadPhoto } from '../api'
 import { AmountPicker, parseBRL, validateBRL } from '../components/AmountPicker'
 import { EmojiTextarea } from '../components/EmojiTextarea'
 import { Field } from '../components/Field'
 import { InstagramIcon, TikTokIcon } from '../components/icons'
 import { ImageUpload } from '../components/ImageUpload'
+import { Modal } from '../components/Modal'
 import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 import { Alert, Button, Card, Input, Muted, NarrowContainer, Stack } from '../components/ui'
@@ -25,6 +26,16 @@ const STEPS = [
   { title: 'Verificação de documento', desc: 'Escaneie o QRCode com o celular para verificar seu documento.' },
 ]
 
+
+const ReviewNotice = styled.div`
+  padding: 28px 20px 24px;
+  text-align: center;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  h2 { font-size: 20px; }
+  svg { color: ${({ theme }) => theme.colors.primaryText}; }
+`
 
 const Progress = styled.div`
   margin-bottom: 16px;
@@ -107,6 +118,7 @@ export default function BecomeCreator() {
   const [errors, setErrors] = useState<Errors>({})
   const [verifyUrl, setVerifyUrl] = useState('')
   const [saving, setSaving] = useState(false)
+  const [inReview, setInReview] = useState(false)
   const [form, setForm] = useState<Form>({
     country: 'Brasil',
     cpf: '',
@@ -169,7 +181,7 @@ export default function BecomeCreator() {
     if (s === 1) {
       await once('avatar', form.avatar, () => uploadPhoto(form.avatar))
       await once('s1', JSON.stringify([form.displayName, form.handle]), () =>
-        updateMe({ name: form.displayName.trim(), profile: `@${form.handle}` }))
+        updateMe({ name: form.displayName.trim(), profile: form.handle }))
     }
     if (s === 2) {
       await once('cover', form.cover, () => uploadCover(form.cover))
@@ -252,6 +264,20 @@ export default function BecomeCreator() {
     })
     navigate('/conta')
   }
+
+  // Evento do WebSocket: documentos recebidos e em análise; avisa por 5s e vai para a página inicial
+  useEffect(
+    () =>
+      subscribeEvents(data => {
+        if (eventName(data) === 'liveness_request_in_review') setInReview(true)
+      }),
+    [],
+  )
+  useEffect(() => {
+    if (!inReview) return
+    const t = window.setTimeout(() => navigate('/'), 5000)
+    return () => window.clearTimeout(t)
+  }, [inReview, navigate])
 
   const isLast = step === STEPS.length - 1
   const priceValid = !validateBRL(form.price)
@@ -374,6 +400,14 @@ export default function BecomeCreator() {
           </Nav>
         </Stack>
       </Card>
+
+      <Modal open={inReview} onClose={() => {}} hideClose label="Análise em andamento" width={380}>
+        <ReviewNotice>
+          <Clock size={48} aria-hidden />
+          <h2>Análise em andamento</h2>
+          <Muted>Recebemos seus documentos. A análise para verificação da sua conta está em andamento.</Muted>
+        </ReviewNotice>
+      </Modal>
     </NarrowContainer>
   )
 }

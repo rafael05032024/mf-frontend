@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, CalendarCheck, Image as ImageIcon, Lock, Pencil, Plus, Trash2, Video } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
-import { deletePost, getProfile, subscribeToProfile, updatePost, ApiError } from '../api'
+import { deletePost, getProfile, subscribeToProfile, ApiError } from '../api'
 import { PageLoader } from '../components/PageLoader'
 import { Avatar } from '../components/Avatar'
 import { InstagramIcon, TikTokIcon, VerifiedBadge } from '../components/icons'
@@ -11,8 +11,7 @@ import { LoginModal } from '../components/LoginModal'
 import { MediaViewer } from '../components/MediaViewer'
 import { Modal } from '../components/Modal'
 import { SubscribeModal, SuccessModal } from '../components/SubscribeModals'
-import { Switch } from '../components/Switch'
-import { Alert, Button, Container, Muted, Textarea, Title } from '../components/ui'
+import { Alert, Button, Container, Muted, Title } from '../components/ui'
 import { useApp } from '../store/AppContext'
 import { mq } from '../styles/theme'
 import type { Media, MediaType, Profile } from '../types'
@@ -179,16 +178,6 @@ const Tab = styled.button<{ $active: boolean }>`
   ${mq.md} { flex: 0 0 auto; }
 `
 
-// TODO: substituir pela descrição real quando a API a fornecer
-const MOCK_DESCRIPTIONS = [
-  'Bom dia, amores! ☀️ Acordei com vontade de compartilhar esse momento com vocês 💕',
-  'Um pedacinho do meu dia que eu não podia deixar de mostrar 😘🔥 Me conta o que acharam!',
-  'Domingo é dia de relaxar 🌸✨ Quem mais está curtindo o descanso? 😴💖',
-  'Preparei algo especial pra vocês hoje 😈🎁 Não esqueçam de deixar o feedback 👇',
-]
-const mockDescription = (id: string) =>
-  MOCK_DESCRIPTIONS[[...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % MOCK_DESCRIPTIONS.length]
-
 const Empty = styled.div`
   text-align: center;
   padding: 40px 16px;
@@ -203,19 +192,18 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'video', label: 'VÍDEOS' },
 ]
 
-function OwnerActions({ media, onDeleted, onSaved }: { media: Media; onDeleted: () => void; onSaved: (m: Media) => void }) {
-  const [editing, setEditing] = useState(false)
+function OwnerActions({ media, onDeleted }: { media: Media; onDeleted: () => void }) {
+  const navigate = useNavigate()
   const [confirming, setConfirming] = useState(false)
-  const [caption, setCaption] = useState(media.caption)
-  const [paid, setPaid] = useState(media.paid)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  const run = async (fn: () => Promise<void>) => {
+  const remove = async () => {
     setBusy(true)
     setError('')
     try {
-      await fn()
+      await deletePost(media.id)
+      onDeleted()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível concluir a ação.')
     } finally {
@@ -223,32 +211,10 @@ function OwnerActions({ media, onDeleted, onSaved }: { media: Media; onDeleted: 
     }
   }
 
-  const save = () =>
-    run(async () => {
-      await updatePost(media.id, { caption: caption.trim(), is_private: paid })
-      onSaved({ ...media, caption: caption.trim(), paid })
-      setEditing(false)
-    })
-
-  const remove = () =>
-    run(async () => {
-      await deletePost(media.id)
-      onDeleted()
-    })
-
   return (
     <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>
       {error && <Alert $tone="danger" role="alert">{error}</Alert>}
-      {editing ? (
-        <>
-          <Textarea value={caption} onChange={e => setCaption(e.target.value)} rows={3} maxLength={500} placeholder="Legenda" aria-label="Legenda" />
-          <Switch checked={paid} onChange={setPaid} label="Conteúdo exclusivo" description="Apenas assinantes podem ver" />
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Button $size="sm" onClick={save} disabled={busy}>Salvar</Button>
-            <Button $size="sm" $variant="outline" onClick={() => setEditing(false)} disabled={busy}>Cancelar</Button>
-          </div>
-        </>
-      ) : confirming ? (
+      {confirming ? (
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <span>Excluir esta postagem?</span>
           <Button $size="sm" onClick={remove} disabled={busy}>Excluir</Button>
@@ -256,7 +222,7 @@ function OwnerActions({ media, onDeleted, onSaved }: { media: Media; onDeleted: 
         </div>
       ) : (
         <div style={{ display: 'flex', gap: 8 }}>
-          <Button $size="sm" $variant="outline" onClick={() => setEditing(true)}><Pencil size={16} /> Editar</Button>
+          <Button $size="sm" $variant="outline" onClick={() => navigate('/postar', { state: { media } })}><Pencil size={16} /> Editar</Button>
           <Button $size="sm" $variant="outline" onClick={() => setConfirming(true)}><Trash2 size={16} /> Excluir</Button>
         </div>
       )}
@@ -465,17 +431,20 @@ export default function ProfileDetail() {
           <MediaViewer
             key={viewing.id}
             media={viewing}
-            description={mockDescription(viewing.id)}
             footer={
               isOwner && (
                 <OwnerActions
                   media={viewing}
-                  onSaved={m => {
-                    setProfile(p => p && { ...p, media: p.media.map(x => (x.id === m.id ? { ...x, caption: m.caption, paid: m.paid } : x)) })
-                    setViewing(m)
-                  }}
                   onDeleted={() => {
-                    setProfile(p => p && { ...p, media: p.media.filter(x => x.id !== viewing.id) })
+                    setProfile(p => p && {
+                      ...p,
+                      media: p.media.filter(x => x.id !== viewing.id),
+                      counters: p.counters && {
+                        photos: p.counters.photos - (viewing.type === 'photo' ? 1 : 0),
+                        videos: p.counters.videos - (viewing.type === 'video' ? 1 : 0),
+                        private: p.counters.private - (viewing.paid ? 1 : 0),
+                      },
+                    })
                     setViewing(null)
                   }}
                 />

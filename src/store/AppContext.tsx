@@ -1,4 +1,4 @@
-import { setToken } from '../api'
+import { connectEvents, getToken, setToken } from '../api'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { mockProfiles } from '../data/mock'
 import type { CreatorInfo, Media, Profile, User } from '../types'
@@ -78,6 +78,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [sessionId])
 
   const user = accounts.find(a => a.id === sessionId) ?? null
+  const eventProfile = user && getToken() ? user.handle : null
+
+  // WebSocket de eventos do perfil, aberto enquanto houver sessão autenticada na API
+  useEffect(() => {
+    if (!eventProfile) return
+    return connectEvents(eventProfile, data => console.debug('[event]', data))
+  }, [eventProfile])
 
   const patchUser = useCallback((id: string, fn: (u: User) => User) => {
     setAccounts(prev => prev.map(a => (a.id === id ? fn(a) : a)))

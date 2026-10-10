@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Check, Copy, QrCode } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { createRecharge, getBalance } from '../api'
+import { createRecharge, eventName, getBalance, subscribeEvents } from '../api'
 import { AmountPicker, parseBRL, validateBRL } from '../components/AmountPicker'
 import { Modal } from '../components/Modal'
 import { PageHeader } from '../components/PageHeader'
@@ -23,11 +23,12 @@ const Summary = styled.dl`
 `
 
 const Pix = styled.div`
-  padding: 28px 20px 20px;
+  padding: 20px 20px 16px;
   text-align: center;
-  h2 { font-size: 20px; }
-  .value { font-size: 32px; font-weight: 800; letter-spacing: -0.02em; color: ${({ theme }) => theme.colors.black}; margin: 4px 0 2px; }
-  .qr { display: inline-block; margin: 16px auto; padding: 14px; border-radius: ${({ theme }) => theme.radius.md}; border: 1px solid ${({ theme }) => theme.colors.border}; background: #fff; }
+  h2 { font-size: 18px; }
+  .value { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; color: ${({ theme }) => theme.colors.black}; margin: 2px 0; }
+  .qr img { width: min(160px, 24dvh); height: min(160px, 24dvh); }
+  .qr { display: inline-block; margin: 10px auto; padding: 8px; line-height: 0; border-radius: ${({ theme }) => theme.radius.md}; border: 1px solid ${({ theme }) => theme.colors.border}; background: #fff; }
   .code {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12px;
@@ -37,7 +38,7 @@ const Pix = styled.div`
     border-radius: ${({ theme }) => theme.radius.sm};
     padding: 10px 12px;
     color: ${({ theme }) => theme.colors.dark};
-    max-height: 72px;
+    max-height: 44px;
     overflow: auto;
   }
 `
@@ -49,6 +50,7 @@ export default function Recharge() {
   const [error, setError] = useState<string>()
   const [pix, setPix] = useState<{ amount: number; payload: string; qrCodeImage: string } | null>(null)
   const [copied, setCopied] = useState(false)
+  const [credited, setCredited] = useState(false)
   const [loading, setLoading] = useState(false)
   const [balance, setBalance] = useState<number | null>(null)
   const [balanceError, setBalanceError] = useState(false)
@@ -60,6 +62,24 @@ export default function Recharge() {
       .catch(() => active && setBalanceError(true))
     return () => { active = false }
   }, [])
+
+  // Evento do WebSocket confirmando a recarga: avisa por 5s e vai para a carteira
+  useEffect(() => {
+    if (!credited) return
+    const t = window.setTimeout(() => navigate('/conta/carteira'), 5000)
+    return () => window.clearTimeout(t)
+  }, [credited, navigate])
+
+  useEffect(
+    () =>
+      subscribeEvents(data => {
+        if (eventName(data) === 'walleted_recharged') {
+          setPix(null)
+          setCredited(true)
+        }
+      }),
+    [],
+  )
 
   const amount = parseBRL(value)
   const valid = !validateBRL(value)
@@ -126,9 +146,9 @@ export default function Recharge() {
             <p className="value">{formatBRL(pix.amount)}</p>
             <Muted>Você receberá {formatFt(brlToFt(pix.amount))}</Muted>
             <div className="qr" role="img" aria-label="QR Code PIX para pagamento">
-              <img src={`data:image/png;base64,${pix.qrCodeImage}`} alt="" width={200} height={200} />
+              <img src={`data:image/png;base64,${pix.qrCodeImage}`} alt="" />
             </div>
-            <Stack $gap={12}>
+            <Stack $gap={8}>
               <Muted>Escaneie o QR Code no app do seu banco ou use o PIX copia e cola:</Muted>
               <div className="code">{pix.payload}</div>
               <Button $variant="outline" $block onClick={copy}>
@@ -140,6 +160,13 @@ export default function Recharge() {
             </Stack>
           </Pix>
         )}
+      </Modal>
+
+      <Modal open={credited} onClose={() => {}} hideClose label="Recarga confirmada" width={380}>
+        <Pix>
+          <h2>Recarga confirmada!</h2>
+          <Muted>O saldo foi adicionado à sua carteira com sucesso. Você será redirecionado em instantes...</Muted>
+        </Pix>
       </Modal>
     </NarrowContainer>
   )
