@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Mail } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { Field } from '../components/Field'
+import { InputGroup } from '../components/InputGroup'
 import { PasswordInput } from '../components/PasswordInput'
 import { Alert, Button, Input, Muted, Stack, Title } from '../components/ui'
 import { useSignIn } from '../store/useSignIn'
@@ -53,7 +54,9 @@ export default function Login() {
             </Alert>
           )}
           <Field label="E-mail ou perfil">
-            <Input value={identifier} onChange={e => setIdentifier(e.target.value)} autoComplete="username" placeholder="voce@email.com ou @perfil" />
+            <InputGroup leftIcon={<Mail size={18} />}>
+              <Input value={identifier} onChange={e => setIdentifier(e.target.value)} autoComplete="username" placeholder="voce@email.com ou @perfil" />
+            </InputGroup>
           </Field>
           <Field label="Senha">
             <PasswordInput value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />

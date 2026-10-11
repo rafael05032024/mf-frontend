@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { AlertCircle, Film, ImagePlus, Loader2, Lock, Play, Trash2, Unlock } from 'lucide-react'
+import { AlertCircle, CloudUpload, Loader2, Lock, Play, Trash2, Unlock } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { EmojiTextarea } from '../components/EmojiTextarea'
 import styled, { keyframes } from 'styled-components'
@@ -7,7 +7,7 @@ import { Field } from '../components/Field'
 import { PageHeader } from '../components/PageHeader'
 import { Switch } from '../components/Switch'
 import { useToast } from '../components/Toast'
-import { Alert, Button, Card, FieldError, IconButton, Label, NarrowContainer, Stack } from '../components/ui'
+import { Alert, Button, Card, FieldError, IconButton, NarrowContainer, Stack } from '../components/ui'
 import { ApiError, createPost, updatePost } from '../api'
 import { useAuthedUser } from '../store/AppContext'
 import type { Media, MediaType } from '../types'
@@ -17,23 +17,25 @@ const spin = keyframes`to { transform: rotate(360deg) }`
 
 const Drop = styled.button<{ $invalid: boolean }>`
   width: 100%;
-  aspect-ratio: 1;
-  max-height: 420px;
+  aspect-ratio: 4 / 3;
+  max-height: 360px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   border-radius: ${({ theme }) => theme.radius.lg};
   border: 2px dashed ${({ $invalid, theme }) => ($invalid ? theme.colors.danger : theme.colors.border)};
   background: ${({ theme }) => theme.colors.light};
   color: ${({ theme }) => theme.colors.dark};
+  cursor: pointer;
   transition: border-color .18s ease, background-color .18s ease;
   &:hover { border-color: ${({ theme }) => theme.colors.primary}; background: ${({ theme }) => theme.colors.primarySoft}; }
-  svg { color: ${({ theme }) => theme.colors.primaryText}; }
-  strong { font-size: 16px; }
+  &:hover svg { color: ${({ theme }) => theme.colors.primary}; }
+  svg { color: ${({ theme }) => theme.colors.gray}; transition: color .18s ease; }
+  strong { font-size: 15px; font-weight: 600; }
   small { color: ${({ theme }) => theme.colors.grayText}; font-size: 13px; }
-  .spin { animation: ${spin} 1s linear infinite; }
+  .spin { animation: ${spin} 1s linear infinite; color: ${({ theme }) => theme.colors.primary}; }
 `
 
 const Preview = styled.div`
@@ -113,7 +115,6 @@ export default function Post() {
         <Card>
           <Stack>
             <div>
-              <Label as="span">Mídia</Label>
               {media ? (
                 <Preview>
                   {media.type === 'video' && !file
@@ -134,7 +135,7 @@ export default function Post() {
                 >
                   {loading ? <Loader2 className="spin" size={36} /> : (
                     <>
-                      <span style={{ display: 'flex', gap: 8 }}><ImagePlus size={32} aria-hidden /><Film size={32} aria-hidden /></span>
+                      <CloudUpload size={36} aria-hidden />
                       <strong>Selecionar foto ou vídeo</strong>
                       <small>Toque ou arraste um arquivo aqui</small>
                     </>

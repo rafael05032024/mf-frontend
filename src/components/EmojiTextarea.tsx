@@ -102,8 +102,7 @@ type Props = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChan
   onChange: (value: string) => void
 }
 
-/** Textarea com seletor de emojis; insere na posição do cursor respeitando maxLength. */
-export function EmojiTextarea({ value, onChange, maxLength, ...rest }: Props) {
+function EmojiTextareaInner({ value, onChange, maxLength, ...rest }: Props) {
   const [open, setOpen] = useState(false)
   const [cat, setCat] = useState(CATEGORIES[0].key)
   const ref = useRef<HTMLTextAreaElement>(null)
@@ -189,3 +188,7 @@ export function EmojiTextarea({ value, onChange, maxLength, ...rest }: Props) {
     </Wrap>
   )
 }
+
+EmojiTextareaInner.displayName = 'EmojiTextarea'
+
+export const EmojiTextarea = EmojiTextareaInner

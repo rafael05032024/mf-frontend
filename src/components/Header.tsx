@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bell, Plus } from 'lucide-react'
+import { Bell, ImagePlus } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { useApp } from '../store/AppContext'
@@ -42,10 +42,26 @@ const Brand = styled(Link)`
   span b { color: ${({ theme }) => theme.colors.primary}; }
 `
 
-const PostButton = styled(Button)`
-  padding: 0 14px;
+const PostButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 16px;
+  border: none;
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.colors.primary};
+  color: ${({ theme }) => theme.colors.white};
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background-color 0.18s ease, transform 0.1s ease, box-shadow 0.18s ease;
+  &:hover { background: ${({ theme }) => theme.colors.primaryHover}; box-shadow: 0 2px 8px rgba(0, 175, 240, 0.3); }
+  &:active { transform: scale(0.96); }
   span { display: none; }
-  ${mq.sm} { padding: 0 18px; span { display: inline; } }
+  ${mq.sm} { span { display: inline; } }
 `
 
 const Dot = styled.span`
@@ -167,9 +183,9 @@ export function Header() {
         </Brand>
 
         {isCreator && (
-          <PostButton $size="sm" onClick={() => navigate('/postar')} aria-label="Postar conteúdo">
-            <Plus size={18} strokeWidth={2.6} />
-            <span>POSTAR</span>
+          <PostButton onClick={() => navigate('/postar')} aria-label="Postar conteúdo">
+            <ImagePlus size={16} strokeWidth={2} />
+            <span>Postar</span>
           </PostButton>
         )}
 

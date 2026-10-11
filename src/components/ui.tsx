@@ -62,14 +62,14 @@ export const IconButton = styled.button`
   position: relative;
   display: inline-grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border-radius: ${({ theme }) => theme.radius.sm};
   border: none;
   background: transparent;
-  color: ${({ theme }) => theme.colors.dark};
-  transition: background-color 0.18s ease;
-  &:hover { background: ${({ theme }) => theme.colors.light}; }
+  color: ${({ theme }) => theme.colors.grayText};
+  transition: background-color 0.18s ease, color 0.18s ease;
+  &:hover { background: ${({ theme }) => theme.colors.light}; color: ${({ theme }) => theme.colors.dark}; }
 `
 
 export const Container = styled.main`
@@ -125,27 +125,36 @@ export const Muted = styled.p`
 
 export const Label = styled.label`
   display: block;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: ${({ theme }) => theme.colors.dark};
   margin-bottom: 6px;
+  letter-spacing: 0.01em;
 `
 
 const fieldBase = css`
   width: 100%;
-  min-height: 48px;
-  padding: 12px 14px;
+  min-height: 52px;
+  padding: 14px 16px;
   border-radius: ${({ theme }) => theme.radius.md};
   border: 1.5px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.white};
-  font-size: 16px; /* evita zoom automático no iOS */
+  font-size: 16px;
+  cursor: text;
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
   &::placeholder { color: ${({ theme }) => theme.colors.gray}; }
+  &:hover:not(:focus):not(:read-only):not([aria-invalid='true']) {
+    border-color: ${({ theme }) => theme.colors.gray};
+  }
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.colors.primary};
+    box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.primarySoft};
   }
-  &[aria-invalid='true'] { border-color: ${({ theme }) => theme.colors.danger}; }
+  &[aria-invalid='true'] {
+    border-color: ${({ theme }) => theme.colors.danger};
+    &:focus { box-shadow: 0 0 0 3px ${({ theme }) => theme.colors.dangerSoft}; }
+  }
   &:read-only:not(select) {
     background: ${({ theme }) => theme.colors.light};
     color: ${({ theme }) => theme.colors.grayText};
@@ -153,8 +162,30 @@ const fieldBase = css`
   }
 `
 
-export const Input = styled.input`${fieldBase}`
-export const Select = styled.select`${fieldBase}`
+export const Input = styled.input`
+  ${fieldBase}
+  &[type='date'] {
+    color-scheme: light;
+    &::-webkit-date-and-time-value { text-align: left; }
+    &::-webkit-calendar-picker-indicator {
+      opacity: 0.5;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: opacity 0.18s ease;
+      &:hover { opacity: 0.8; }
+    }
+  }
+`
+export const Select = styled.select`
+  ${fieldBase}
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238A8A8A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+`
 export const Textarea = styled.textarea`
   ${fieldBase}
   resize: vertical;
@@ -163,15 +194,15 @@ export const Textarea = styled.textarea`
 `
 
 export const FieldError = styled.p`
-  margin-top: 6px;
-  font-size: 13px;
+  margin-top: 4px;
+  font-size: 12px;
   font-weight: 500;
   color: ${({ theme }) => theme.colors.danger};
 `
 
 export const Hint = styled.p`
-  margin-top: 6px;
-  font-size: 13px;
+  margin-top: 4px;
+  font-size: 12px;
   color: ${({ theme }) => theme.colors.grayText};
 `
 

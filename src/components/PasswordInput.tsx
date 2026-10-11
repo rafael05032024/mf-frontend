@@ -1,22 +1,38 @@
 import { useState, type InputHTMLAttributes } from 'react'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Lock } from 'lucide-react'
 import styled from 'styled-components'
 import { IconButton, Input } from './ui'
 
 const Wrap = styled.div`
   position: relative;
-  input { padding-right: 52px; }
-  button { position: absolute; right: 2px; top: 2px; }
+  .ig-icon-left {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: ${({ theme }) => theme.colors.gray};
+    display: flex;
+    pointer-events: none;
+    transition: color 0.18s ease;
+  }
+  &:focus-within > .ig-icon-left { color: ${({ theme }) => theme.colors.primary}; }
+  input { padding-left: 44px; padding-right: 52px; }
+  > button { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
 `
 
-export function PasswordInput(props: InputHTMLAttributes<HTMLInputElement>) {
+function PasswordInputInner(props: InputHTMLAttributes<HTMLInputElement>) {
   const [show, setShow] = useState(false)
   return (
     <Wrap>
+      <span className="ig-icon-left" aria-hidden><Lock size={18} /></span>
       <Input {...props} type={show ? 'text' : 'password'} />
       <IconButton type="button" onClick={() => setShow(s => !s)} aria-label={show ? 'Ocultar senha' : 'Mostrar senha'}>
-        {show ? <EyeOff size={20} /> : <Eye size={20} />}
+        {show ? <EyeOff size={18} /> : <Eye size={18} />}
       </IconButton>
     </Wrap>
   )
 }
+
+PasswordInputInner.displayName = 'PasswordInput'
+
+export const PasswordInput = PasswordInputInner

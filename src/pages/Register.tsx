@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import { AlertCircle, AtSign, CheckCircle2, Mail, User } from 'lucide-react'
 import styled from 'styled-components'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { createAccount, loginRequest, sendVerificationCode } from '../api'
 import { Modal } from '../components/Modal'
 import { CodeInput } from '../components/CodeInput'
 import { Field } from '../components/Field'
+import { InputGroup } from '../components/InputGroup'
 import { PasswordInput } from '../components/PasswordInput'
 import { Alert, Button, Input, Muted, Stack, Title } from '../components/ui'
 import { useApp } from '../store/AppContext'
@@ -149,7 +150,7 @@ export default function Register() {
               </Alert>
             )}
             {resent && !codeError && <Alert $tone="success" role="status">Novo código enviado.</Alert>}
-            <Field label="Código de verificação">
+            <Field label="Código de verificação" float={false}>
               <CodeInput value={code} onChange={v => { setCode(v); setCodeError('') }} autoFocus />
             </Field>
             <Button type="submit" $block $size="lg" disabled={loading || redirecting}>{loading ? 'Verificando...' : 'Confirmar e criar conta'}</Button>
@@ -173,13 +174,19 @@ export default function Register() {
             </Alert>
           )}
           <Field label="Nome" error={errors.name}>
-            <Input value={form.name} onChange={set('name')} autoComplete="name" placeholder="Como você se chama?" />
+            <InputGroup leftIcon={<User size={18} />}>
+              <Input value={form.name} onChange={set('name')} autoComplete="name" placeholder="Como você se chama?" />
+            </InputGroup>
           </Field>
           <Field label="E-mail" error={errors.email}>
-            <Input type="email" inputMode="email" value={form.email} onChange={set('email')} autoComplete="email" placeholder="voce@email.com" />
+            <InputGroup leftIcon={<Mail size={18} />}>
+              <Input type="email" inputMode="email" value={form.email} onChange={set('email')} autoComplete="email" placeholder="voce@email.com" />
+            </InputGroup>
           </Field>
           <Field label="Perfil" error={errors.handle} hint="Seu @ na plataforma. Ex.: @rafael_22">
-            <Input value={form.handle} onChange={set('handle')} autoCapitalize="none" autoComplete="username" placeholder="seu.perfil" />
+            <InputGroup leftIcon={<AtSign size={18} />}>
+              <Input value={form.handle} onChange={set('handle')} autoCapitalize="none" autoComplete="username" placeholder="seu.perfil" />
+            </InputGroup>
           </Field>
           <Field label="Senha" error={errors.password} hint="Mínimo de 6 caracteres">
             <PasswordInput value={form.password} onChange={set('password')} autoComplete="new-password" />

@@ -1,5 +1,5 @@
-import { cloneElement, useEffect, useRef, useState } from 'react'
-import { AtSign, Clock, ExternalLink } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { AtSign, Calendar, Clock, CreditCard, ExternalLink, Globe, User } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -9,6 +9,7 @@ import { EmojiTextarea } from '../components/EmojiTextarea'
 import { Field } from '../components/Field'
 import { InstagramIcon, TikTokIcon } from '../components/icons'
 import { ImageUpload } from '../components/ImageUpload'
+import { InputGroup } from '../components/InputGroup'
 import { Modal } from '../components/Modal'
 import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
@@ -59,11 +60,6 @@ const Nav = styled.div`
   gap: 10px;
 `
 
-const Prefixed = styled.div`
-  position: relative;
-  > span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: ${({ theme }) => theme.colors.grayText}; display: flex; }
-  input { padding-left: 44px; }
-`
 
 const QRBox = styled.div`
   display: flex;
@@ -102,15 +98,6 @@ type Form = {
 }
 type Errors = Partial<Record<keyof Form, string>>
 
-/** Input com ícone à esquerda; repassa id/aria (injetados pelo Field) ao input interno. */
-function Prefix({ icon, children, ...aria }: { icon: React.ReactNode; children: React.ReactElement<Record<string, unknown>> }) {
-  return (
-    <Prefixed>
-      <span aria-hidden>{icon}</span>
-      {cloneElement(children, aria)}
-    </Prefixed>
-  )
-}
 
 export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boolean }) {
   const STEPS = verifyOnly ? VERIFY_STEPS : ALL_STEPS
@@ -297,16 +284,24 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
           {stepId === 'personal' && (
             <>
               <Field label="País" error={errors.country}>
-                <Input value="Brasil" readOnly />
+                <InputGroup leftIcon={<Globe size={18} />}>
+                  <Input value="Brasil" readOnly />
+                </InputGroup>
               </Field>
               <Field label="CPF" error={errors.cpf}>
-                <Input inputMode="numeric" value={form.cpf} onChange={e => set('cpf', maskCPF(e.target.value))} placeholder="000.000.000-00" />
+                <InputGroup leftIcon={<CreditCard size={18} />}>
+                  <Input inputMode="numeric" value={form.cpf} onChange={e => set('cpf', maskCPF(e.target.value))} placeholder="000.000.000-00" />
+                </InputGroup>
               </Field>
               <Field label="Nome completo" error={errors.legalName} hint="Igual ao do documento">
-                <Input value={form.legalName} onChange={e => set('legalName', e.target.value)} autoComplete="name" />
+                <InputGroup leftIcon={<User size={18} />}>
+                  <Input value={form.legalName} onChange={e => set('legalName', e.target.value)} autoComplete="name" />
+                </InputGroup>
               </Field>
               <Field label="Data de nascimento" error={errors.birthDate}>
-                <Input type="date" value={form.birthDate} onChange={e => set('birthDate', e.target.value)} max={new Date().toISOString().slice(0, 10)} />
+                <InputGroup leftIcon={<Calendar size={18} />}>
+                  <Input type="date" value={form.birthDate} onChange={e => set('birthDate', e.target.value)} max={new Date().toISOString().slice(0, 10)} />
+                </InputGroup>
               </Field>
             </>
           )}
@@ -315,12 +310,14 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
             <>
               <ImageUpload label="Foto de perfil" shape="avatar" size={180} center crop value={form.avatar} onChange={v => set('avatar', v)} error={errors.avatar} hint="Enviar" />
               <Field label="Nome do perfil" error={errors.displayName} hint="Nome exibido para os fãs">
-                <Input value={form.displayName} onChange={e => set('displayName', e.target.value)} />
+                <InputGroup leftIcon={<User size={18} />}>
+                  <Input value={form.displayName} onChange={e => set('displayName', e.target.value)} />
+                </InputGroup>
               </Field>
               <Field label="Perfil identificador na plataforma" error={errors.handle} hint={`myfoot.com/perfil/${form.handle || 'seu.perfil'}`}>
-                <Prefix icon={<AtSign size={18} />}>
+                <InputGroup leftIcon={<AtSign size={18} />}>
                   <Input value={form.handle} onChange={e => set('handle', normalizeHandle(e.target.value))} autoCapitalize="none" />
-                </Prefix>
+                </InputGroup>
               </Field>
             </>
           )}
@@ -342,14 +339,14 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
           {stepId === 'social' && (
             <>
               <Field label="Perfil do Instagram">
-                <Prefix icon={<InstagramIcon size={18} />}>
+                <InputGroup leftIcon={<InstagramIcon size={18} />}>
                   <Input value={form.instagram} onChange={e => set('instagram', e.target.value)} placeholder="seu.instagram" autoCapitalize="none" />
-                </Prefix>
+                </InputGroup>
               </Field>
               <Field label="Perfil do TikTok">
-                <Prefix icon={<TikTokIcon size={18} />}>
+                <InputGroup leftIcon={<TikTokIcon size={18} />}>
                   <Input value={form.tiktok} onChange={e => set('tiktok', e.target.value)} placeholder="seu.tiktok" autoCapitalize="none" />
-                </Prefix>
+                </InputGroup>
               </Field>
             </>
           )}

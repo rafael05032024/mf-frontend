@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, AtSign, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Field } from '../components/Field'
+import { InputGroup } from '../components/InputGroup'
 import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 import { Alert, Button, Card, Input, NarrowContainer, Stack } from '../components/ui'
@@ -36,10 +37,14 @@ export default function EditProfileName() {
           <Card>
             <Stack>
               <Field label="Nome do perfil" error={nameError}>
-                <Input value={name} onChange={e => setName(e.target.value)} autoComplete="name" />
+                <InputGroup leftIcon={<User size={18} />}>
+                  <Input value={name} onChange={e => setName(e.target.value)} autoComplete="name" />
+                </InputGroup>
               </Field>
               <Field label="Identificador" hint="Seu @ no perfil">
-                <Input value={handle} onChange={e => setHandle(e.target.value)} autoCapitalize="none" autoComplete="username" />
+                <InputGroup leftIcon={<AtSign size={18} />}>
+                  <Input value={handle} onChange={e => setHandle(e.target.value)} autoCapitalize="none" autoComplete="username" />
+                </InputGroup>
               </Field>
             </Stack>
           </Card>

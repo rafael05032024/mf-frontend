@@ -49,7 +49,7 @@ export function AmountPicker({ label, hideLabel, value, onChange, error, presets
   const num = Number(value.replace(',', '.'))
   return (
     <>
-      <Field label={label} hideLabel={hideLabel} error={error} hint={`Entre R$ ${MIN_BRL},00 e R$ ${MAX_BRL},00`}>
+      <Field label={label} hideLabel={hideLabel} error={error} hint={`Entre R$ ${MIN_BRL},00 e R$ ${MAX_BRL},00`} float={false}>
         <MoneyInput value={value} onChange={onChange} whole={whole} />
       </Field>
       <Range

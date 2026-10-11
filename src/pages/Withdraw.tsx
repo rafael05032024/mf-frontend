@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react'
+import { Coins, Key } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { Field } from '../components/Field'
+import { InputGroup } from '../components/InputGroup'
 import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 import { Button, Card, Input, Muted, NarrowContainer, Select, Stack } from '../components/ui'
@@ -62,9 +64,11 @@ export default function Withdraw() {
           <Card>
             <Stack>
               <Field label="Valor em FootCoins" error={errors.amount} hint={ft > 0 ? `Você receberá ${formatBRL(ftToBrl(ft))}` : `Mínimo de ${formatFt(MIN_FT)}`}>
-                <Input inputMode="numeric" value={amount} onChange={e => setAmount(e.target.value.replace(/\D/g, ''))} placeholder="0" />
+                <InputGroup leftIcon={<Coins size={18} />}>
+                  <Input inputMode="numeric" value={amount} onChange={e => setAmount(e.target.value.replace(/\D/g, ''))} placeholder="0" />
+                </InputGroup>
               </Field>
-              <Field label="Tipo de chave PIX">
+              <Field label="Tipo de chave PIX" float={false}>
                 <Select value={keyType} onChange={e => setKeyType(e.target.value)}>
                   <option value="cpf">CPF</option>
                   <option value="email">E-mail</option>
@@ -73,7 +77,9 @@ export default function Withdraw() {
                 </Select>
               </Field>
               <Field label="Chave PIX" error={errors.pixKey}>
-                <Input value={pixKey} onChange={e => setPixKey(e.target.value)} autoCapitalize="none" />
+                <InputGroup leftIcon={<Key size={18} />}>
+                  <Input value={pixKey} onChange={e => setPixKey(e.target.value)} autoCapitalize="none" />
+                </InputGroup>
               </Field>
             </Stack>
           </Card>

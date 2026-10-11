@@ -2,6 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Field } from '../components/Field'
+import { InstagramIcon, TikTokIcon } from '../components/icons'
+import { InputGroup } from '../components/InputGroup'
 import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 import { Alert, Button, Card, Input, NarrowContainer, Stack } from '../components/ui'
@@ -34,10 +36,14 @@ export default function EditProfileSocials() {
           <Card>
             <Stack>
               <Field label="Instagram">
-                <Input value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="seu.instagram" autoCapitalize="none" />
+                <InputGroup leftIcon={<InstagramIcon size={18} />}>
+                  <Input value={instagram} onChange={e => setInstagram(e.target.value)} placeholder="seu.instagram" autoCapitalize="none" />
+                </InputGroup>
               </Field>
               <Field label="TikTok">
-                <Input value={tiktok} onChange={e => setTiktok(e.target.value)} placeholder="seu.tiktok" autoCapitalize="none" />
+                <InputGroup leftIcon={<TikTokIcon size={18} />}>
+                  <Input value={tiktok} onChange={e => setTiktok(e.target.value)} placeholder="seu.tiktok" autoCapitalize="none" />
+                </InputGroup>
               </Field>
             </Stack>
           </Card>
