@@ -29,7 +29,8 @@ export interface Me {
   subscriptions: number
   /** Valor da assinatura do publicador, em reais */
   plan_value?: number | null
-  verified?: boolean
+  /** Nível da conta: 1 = usuário comum; maior que 1 = publicador de conteúdo */
+  level?: number
 }
 
 export function getMe() {
@@ -39,9 +40,9 @@ export function getMe() {
 export async function login(email: string, password: string) {
   const { token } = await api.post<{ token: string }>('/api/login', { email, password })
   setToken(token)
-  // perfil (@), nome e flag de publicador (verified) vêm de /accounts/me; falha aqui não deve impedir o login
+  // perfil (@), nome e nível (level) vêm de /accounts/me; falha aqui não deve impedir o login
   const me = await getMe().catch(() => undefined)
-  return { token, verified: me?.verified === true, profile: me?.profile.replace(/^@/, ''), name: me?.name, avatar: mediaUrl(me?.thumb), cover: mediaUrl(me?.cover_photo) }
+  return { token, level: me?.level ?? 1, profile: me?.profile.replace(/^@/, ''), name: me?.name, avatar: mediaUrl(me?.thumb), cover: mediaUrl(me?.cover_photo) }
 }
 
 export interface UpdateMePayload {
@@ -86,6 +87,11 @@ export function createPlan(value: number) {
 /** Atualiza o valor do plano de assinatura. `value` em reais */
 export function updatePlan(value: number) {
   return api.put<void>('/api/plans', { value })
+}
+
+/** Pré-cadastro como parceiro (publicador) sem concluir a verificação de documentos */
+export function preRegisterPartner() {
+  return api.post<void>('/api/partners/pre-registration')
 }
 
 /** Inicia a sessão de verificação de documentos; retorna o link do provedor externo (exibido como QRCode) */

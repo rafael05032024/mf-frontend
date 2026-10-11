@@ -42,8 +42,8 @@ interface AppState {
   addPost: (post: Omit<Media, 'id' | 'createdAt'>) => Result
   markNotificationsRead: () => void
   handleAvailable: (handle: string) => boolean
-  /** Aplica o flag `verified` do login: true exibe a plataforma na visão de publicador */
-  applyVerified: (email: string, verified: boolean) => void
+  /** Aplica o `level` de /accounts/me: maior que 1 exibe a plataforma na visão de publicador */
+  applyLevel: (email: string, level: number) => void
   /** Sincroniza o @ da conta local com o perfil retornado pela API no login */
   applyProfile: (email: string, profile: string, extra?: { name?: string; avatar?: string; cover?: string }) => void
 }
@@ -162,16 +162,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     )
   }
 
-  const applyVerified: AppState['applyVerified'] = (email, verified) => {
+  const applyLevel: AppState['applyLevel'] = (email, level) => {
+    const publisher = level > 1
     const id = email.trim().toLowerCase()
     setAccounts(prev =>
       prev.map(a => {
         if (a.email.toLowerCase() !== id) return a
-        // /accounts/me é a fonte da verdade: perde o status de publicador se a API diz que não é verificado
-        if (!verified) return a.creatorStatus === 'none' ? a : { ...a, creatorStatus: 'none' }
-        if (a.creatorStatus === 'verified') return a
+        // /accounts/me é a fonte da verdade: perde o status de publicador se a API diz que o level é 1
+        if (!publisher) return a.creatorStatus === 'none' && a.level === level ? a : { ...a, level, creatorStatus: 'none' }
+        if (a.creatorStatus === 'verified') return a.level === level ? a : { ...a, level }
         return {
           ...a,
+          level,
           creatorStatus: 'verified',
           creator: a.creator ?? {
             country: 'Brasil',
@@ -360,7 +362,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addPost,
     markNotificationsRead,
     handleAvailable,
-    applyVerified,
+    applyLevel,
     applyProfile,
   }
 

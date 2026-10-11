@@ -3,7 +3,7 @@ import { AtSign, Clock, ExternalLink } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { ApiError, createLiveness, createPlan, eventName, subscribeEvents, updateMe, uploadCover, uploadPhoto } from '../api'
+import { ApiError, createLiveness, createPlan, eventName, getMe, mediaUrl, preRegisterPartner, subscribeEvents, updateMe, uploadCover, uploadPhoto } from '../api'
 import { AmountPicker, parseBRL, validateBRL } from '../components/AmountPicker'
 import { EmojiTextarea } from '../components/EmojiTextarea'
 import { Field } from '../components/Field'
@@ -14,18 +14,21 @@ import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 import { Button, Card, Input, Muted, NarrowContainer, Stack } from '../components/ui'
 import { useApp, useAuthedUser } from '../store/AppContext'
-import { mq } from '../styles/theme'
 import { ageFrom, brlToFt, formatFt, HANDLE_RE, isValidCPF, maskCPF, normalizeHandle } from '../utils/format'
 
-const STEPS = [
-  { title: 'Dados pessoais', desc: 'Precisamos confirmar sua identidade. Esses dados não aparecem no seu perfil.' },
-  { title: 'Seu perfil', desc: 'Como os fãs vão te encontrar na plataforma.' },
-  { title: 'Capa e biografia', desc: 'Capriche: é a primeira impressão do seu perfil.' },
-  { title: 'Redes sociais', desc: 'Opcional. Ajuda seus seguidores a te encontrarem.' },
-  { title: 'Valor da assinatura', desc: 'Quanto seus assinantes pagarão por mês.' },
-  { title: 'Verificação de documentos', desc: 'Escaneie o QRCode com o celular ou abra o link neste aparelho para verificar seus documentos.' },
+type StepId = 'personal' | 'profile' | 'cover' | 'social' | 'price' | 'verify'
+
+const ALL_STEPS: { id: StepId; title: string; desc: string }[] = [
+  { id: 'personal', title: 'Dados pessoais', desc: 'Precisamos confirmar sua identidade. Esses dados não aparecem no seu perfil.' },
+  { id: 'profile', title: 'Seu perfil', desc: 'Como os fãs vão te encontrar na plataforma.' },
+  { id: 'cover', title: 'Capa e biografia', desc: 'Capriche: é a primeira impressão do seu perfil.' },
+  { id: 'social', title: 'Redes sociais', desc: 'Opcional. Ajuda seus seguidores a te encontrarem.' },
+  { id: 'price', title: 'Valor da assinatura', desc: 'Quanto seus assinantes pagarão por mês.' },
+  { id: 'verify', title: 'Verificação de documentos', desc: 'Escaneie o QRCode com o celular ou abra o link neste aparelho para verificar seus documentos.' },
 ]
 
+// conta level 2 (pré-cadastro): só falta confirmar identidade e verificar documentos; perfil, foto, capa, bio, redes e plano já existem
+const VERIFY_STEPS = ALL_STEPS.filter(s => s.id === 'personal' || s.id === 'verify')
 
 const ReviewNotice = styled.div`
   padding: 28px 20px 24px;
@@ -40,7 +43,7 @@ const ReviewNotice = styled.div`
 const Progress = styled.div`
   margin-bottom: 16px;
   .meta { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: ${({ theme }) => theme.colors.grayText}; margin-bottom: 8px; }
-  .track { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .track { display: grid; grid-template-columns: repeat(var(--steps, 6), 1fr); gap: 6px; }
   .seg { height: 6px; border-radius: 3px; background: ${({ theme }) => theme.colors.border}; transition: background-color .25s ease; }
   .seg.done { background: ${({ theme }) => theme.colors.primary}; }
 `
@@ -50,10 +53,10 @@ const StepHead = styled.div`
 `
 
 const Nav = styled.div`
-  display: grid;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 10px;
-  grid-template-columns: 1fr;
-  ${mq.sm} { grid-template-columns: auto 1fr; }
 `
 
 const Prefixed = styled.div`
@@ -109,15 +112,18 @@ function Prefix({ icon, children, ...aria }: { icon: React.ReactNode; children: 
   )
 }
 
-export default function BecomeCreator() {
+export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boolean }) {
+  const STEPS = verifyOnly ? VERIFY_STEPS : ALL_STEPS
   const user = useAuthedUser()
-  const { handleAvailable } = useApp()
+  const { handleAvailable, applyLevel, applyProfile } = useApp()
   const toast = useToast()
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [errors, setErrors] = useState<Errors>({})
   const [verifyUrl, setVerifyUrl] = useState('')
   const [saving, setSaving] = useState(false)
+  // ao prosseguir sem verificação a conta muda de status; o redirecionamento deve ir para a tela inicial
+  const skipped = useRef(false)
   const [inReview, setInReview] = useState(false)
   const [form, setForm] = useState<Form>({
     country: 'Brasil',
@@ -142,25 +148,25 @@ export default function BecomeCreator() {
     if (errors[k]) setErrors(e => ({ ...e, [k]: undefined }))
   }
 
-  const validate = (s: number): Errors => {
+  const validate = (s: StepId): Errors => {
     const er: Errors = {}
-    if (s === 0) {
+    if (s === 'personal') {
       if (!form.country) er.country = 'Selecione o país.'
       if (!isValidCPF(form.cpf)) er.cpf = 'CPF inválido.'
       if (form.legalName.trim().split(/\s+/).length < 2) er.legalName = 'Informe seu nome completo.'
       if (!form.birthDate) er.birthDate = 'Informe sua data de nascimento.'
       else if (ageFrom(form.birthDate) < 18) er.birthDate = 'É preciso ter 18 anos ou mais para ser criador.'
     }
-    if (s === 1) {
+    if (s === 'profile') {
       if (!form.avatar) er.avatar = 'Envie uma foto de perfil.'
       if (form.displayName.trim().length < 2) er.displayName = 'Informe o nome do perfil.'
       if (!HANDLE_RE.test(form.handle)) er.handle = 'Use 3 a 20 caracteres: letras minúsculas, números, "." ou "_".'
       else if (form.handle !== user.handle && !handleAvailable(form.handle)) er.handle = 'Este identificador já está em uso.'
     }
-    if (s === 2) {
+    if (s === 'cover') {
       if (!form.cover) er.cover = 'Envie uma foto de capa.'
     }
-    if (s === 4) er.price = validateBRL(form.price, true)
+    if (s === 'price') er.price = validateBRL(form.price, true)
     return Object.fromEntries(Object.entries(er).filter(([, v]) => v)) as Errors
   }
 
@@ -171,29 +177,28 @@ export default function BecomeCreator() {
   }
 
   /** Salva na API os dados da etapa atual */
-  const saveStep = async (s: number) => {
-    if (s === 0)
+  const saveStep = async (s: StepId) => {
+    if (s === 'personal')
       await once('s0', JSON.stringify([form.cpf, form.legalName, form.birthDate]), () =>
         updateMe({ document: form.cpf.replace(/\D/g, ''), real_name: form.legalName.trim(), birthdate: form.birthDate }))
-    if (s === 1) {
+    if (s === 'profile') {
       await once('avatar', form.avatar, () => uploadPhoto(form.avatar))
       await once('s1', JSON.stringify([form.displayName, form.handle]), () =>
         updateMe({ name: form.displayName.trim(), profile: form.handle }))
     }
-    if (s === 2) {
+    if (s === 'cover') {
       await once('cover', form.cover, () => uploadCover(form.cover))
       await once('s2', form.bio, () => updateMe({ description: form.bio.trim() }))
     }
-    if (s === 3) {
+    if (s === 'social') {
       const instagram = normalizeHandle(form.instagram)
       const tiktok = normalizeHandle(form.tiktok)
       await once('s3', JSON.stringify([instagram, tiktok]), () =>
         updateMe({ instagram: instagram ? `@${instagram}` : '', tiktok: tiktok ? `@${tiktok}` : '' }))
     }
-    if (s === 4) {
-      await once('price', form.price, () => createPlan(parseBRL(form.price)))
-      await loadVerification()
-    }
+    if (s === 'price') await once('price', form.price, () => createPlan(parseBRL(form.price)))
+    // o QRCode é gerado ao entrar na etapa de verificação
+    if (STEPS[STEPS.findIndex(x => x.id === s) + 1]?.id === 'verify') await loadVerification()
   }
 
   const loadVerification = async () => {
@@ -201,12 +206,12 @@ export default function BecomeCreator() {
   }
 
   const next = async () => {
-    const er = validate(step)
+    const er = validate(stepId)
     setErrors(er)
     if (Object.keys(er).length) return
     setSaving(true)
     try {
-      await saveStep(step)
+      await saveStep(stepId)
     } catch (e) {
       toast({ title: 'Não foi possível salvar', message: e instanceof ApiError ? e.message : 'Tente novamente.' })
       return
@@ -215,6 +220,24 @@ export default function BecomeCreator() {
     }
     setStep(s => s + 1)
     window.scrollTo({ top: 0 })
+  }
+
+  const skipVerification = async () => {
+    setSaving(true)
+    skipped.current = true
+    try {
+      await preRegisterPartner()
+      // consulta novamente os dados da conta logada
+      const me = await getMe()
+      applyLevel(user.email, me.level ?? 1)
+      applyProfile(user.email, me.profile.replace(/^@/, ''), { name: me.name, avatar: mediaUrl(me.thumb), cover: mediaUrl(me.cover_photo) })
+      navigate('/', { replace: true, state: { preRegistered: true } })
+    } catch (e) {
+      skipped.current = false
+      toast({ title: 'Não foi possível prosseguir', message: e instanceof ApiError ? e.message : 'Tente novamente.' })
+    } finally {
+      setSaving(false)
+    }
   }
 
   const retryVerification = async () => {
@@ -226,12 +249,6 @@ export default function BecomeCreator() {
     } finally {
       setSaving(false)
     }
-  }
-
-  const back = () => {
-    setErrors({})
-    if (step === 0) navigate('/conta')
-    else setStep(s => s - 1)
   }
 
   // Evento do WebSocket: documentos recebidos e em análise; avisa por 5s e vai para a página inicial
@@ -248,17 +265,19 @@ export default function BecomeCreator() {
     return () => window.clearTimeout(t)
   }, [inReview, navigate])
 
+  const stepId = STEPS[step].id
   const isLast = step === STEPS.length - 1
   const priceValid = !validateBRL(form.price, true)
 
   // depois de todos os hooks (um return antes deles quebra a renderização)
-  if (user.creatorStatus !== 'none') return <Navigate to="/conta" replace />
+  if (verifyOnly && user.level !== 2) return <Navigate to="/conta/editar" replace />
+  if (!verifyOnly && user.creatorStatus !== 'none') return <Navigate to={skipped.current ? '/' : '/conta'} state={skipped.current ? { preRegistered: true } : undefined} replace />
 
   return (
     <NarrowContainer>
-      <PageHeader title="Torne-se um criador" back="/conta" />
+      <PageHeader title={verifyOnly ? 'Verificar conta' : 'Torne-se um criador'} back={verifyOnly ? '/conta/editar' : '/conta'} />
 
-      <Progress aria-label={`Etapa ${step + 1} de ${STEPS.length}`}>
+      <Progress style={{ '--steps': STEPS.length } as React.CSSProperties} aria-label={`Etapa ${step + 1} de ${STEPS.length}`}>
         <div className="meta">
           <span>Etapa {step + 1} de {STEPS.length}</span>
           <span>{STEPS[step].title}</span>
@@ -275,7 +294,7 @@ export default function BecomeCreator() {
             <Muted>{STEPS[step].desc}</Muted>
           </StepHead>
 
-          {step === 0 && (
+          {stepId === 'personal' && (
             <>
               <Field label="País" error={errors.country}>
                 <Input value="Brasil" readOnly />
@@ -292,7 +311,7 @@ export default function BecomeCreator() {
             </>
           )}
 
-          {step === 1 && (
+          {stepId === 'profile' && (
             <>
               <ImageUpload label="Foto de perfil" shape="avatar" size={180} center crop value={form.avatar} onChange={v => set('avatar', v)} error={errors.avatar} hint="Enviar" />
               <Field label="Nome do perfil" error={errors.displayName} hint="Nome exibido para os fãs">
@@ -306,7 +325,7 @@ export default function BecomeCreator() {
             </>
           )}
 
-          {step === 2 && (
+          {stepId === 'cover' && (
             <>
               <ImageUpload label="Foto de capa" shape="cover" crop value={form.cover} onChange={v => set('cover', v)} error={errors.cover} hint="Enviar capa (proporção 3:1)" />
               <Field label="Biografia" error={errors.bio} hint={`${form.bio.length}/500`}>
@@ -320,7 +339,7 @@ export default function BecomeCreator() {
             </>
           )}
 
-          {step === 3 && (
+          {stepId === 'social' && (
             <>
               <Field label="Perfil do Instagram">
                 <Prefix icon={<InstagramIcon size={18} />}>
@@ -335,7 +354,7 @@ export default function BecomeCreator() {
             </>
           )}
 
-          {step === 4 && (
+          {stepId === 'price' && (
             <>
               <AmountPicker label="Valor mensal da assinatura" value={form.price} onChange={v => set('price', v)} error={errors.price} presets={[15, 20, 30, 50, 100, 150]} whole />
               <PriceSummary>
@@ -345,14 +364,14 @@ export default function BecomeCreator() {
             </>
           )}
 
-          {step === 5 && (
+          {stepId === 'verify' && (
             <>
               <QRBox>
                 {verifyUrl ? (
                   <>
                     <div className="qr"><QRCodeSVG value={verifyUrl} size={200} /></div>
                     <Muted>Está no celular? Abra o link abaixo neste aparelho.</Muted>
-                    <Button as="a" href={verifyUrl} target="_blank" rel="noopener noreferrer" $block>
+                    <Button as="a" href={verifyUrl} target="_blank" rel="noopener noreferrer" $size="sm">
                       <ExternalLink size={16} /> Abrir verificação
                     </Button>
                   </>
@@ -364,8 +383,8 @@ export default function BecomeCreator() {
           )}
 
           <Nav>
-            <Button $variant="ghost" onClick={back}>{step === 0 ? 'Cancelar' : 'Voltar'}</Button>
             {!isLast && <Button onClick={next} $block disabled={saving}>{saving ? 'Salvando…' : 'Próximo'}</Button>}
+            {isLast && !verifyOnly && <Button $variant="outline" $block onClick={skipVerification} disabled={saving}>{saving ? 'Aguarde…' : 'Prosseguir sem verificação'}</Button>}
           </Nav>
         </Stack>
       </Card>

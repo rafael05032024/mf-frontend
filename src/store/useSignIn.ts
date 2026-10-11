@@ -8,7 +8,7 @@ type Result = { ok: true } | { ok: false; error: string }
 // Login via API (gera e salva o token JWT) + sessão local do app.
 // Identificadores que não são e-mail (@perfil) e as contas de demonstração usam só a base local.
 export function useSignIn() {
-  const { login, register, handleAvailable, applyVerified, applyProfile } = useApp()
+  const { login, register, handleAvailable, applyLevel, applyProfile } = useApp()
 
   return useCallback(
     async (identifier: string, password: string): Promise<Result> => {
@@ -18,13 +18,13 @@ export function useSignIn() {
         return login(id, password)
       }
 
-      let verified = false
+      let level = 1
       let profile: string | undefined
       let name: string | undefined
       let avatar: string | undefined
       let cover: string | undefined
       try {
-        ({ verified, profile, name, avatar, cover } = await loginRequest(id, password))
+        ({ level, profile, name, avatar, cover } = await loginRequest(id, password))
       } catch {
         // API recusou ou indisponível: tenta a base local (ex.: contas de demonstração)
         setToken(null)
@@ -33,7 +33,7 @@ export function useSignIn() {
 
       const local = login(id, password)
       if (local.ok) {
-        applyVerified(id, verified)
+        applyLevel(id, level)
         if (profile) applyProfile(id, profile, { name, avatar, cover })
         return local
       }
@@ -46,11 +46,11 @@ export function useSignIn() {
       else for (let n = 1; !handleAvailable(handle); n++) handle = `${base}${n}`.slice(0, 20)
       const created = register({ name: name ?? id.split('@')[0], email: id, handle, password })
       if (created.ok) {
-        applyVerified(id, verified)
+        applyLevel(id, level)
         if (profile) applyProfile(id, profile, { name, avatar, cover })
       }
       return created
     },
-    [login, register, handleAvailable, applyVerified, applyProfile],
+    [login, register, handleAvailable, applyLevel, applyProfile],
   )
 }

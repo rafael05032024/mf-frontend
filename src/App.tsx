@@ -20,6 +20,7 @@ const Wallet = lazy(() => import('./pages/Wallet'))
 const Recharge = lazy(() => import('./pages/Recharge'))
 const Withdraw = lazy(() => import('./pages/Withdraw'))
 const BecomeCreator = lazy(() => import('./pages/BecomeCreator'))
+const VerifyAccount = lazy(() => import('./pages/VerifyAccount'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Post = lazy(() => import('./pages/Post'))
 
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="/conta/criador" element={<BecomeCreator />} />
             <Route element={<CreatorOnly />}>
               <Route path="/conta/carteira/resgatar" element={<Withdraw />} />
+              <Route path="/conta/editar/verificar" element={<VerifyAccount />} />
               <Route path="/conta/editar/capa" element={<EditProfileMedia />} />
               <Route path="/conta/editar/assinatura" element={<EditProfilePlan />} />
               <Route path="/conta/editar/redes" element={<EditProfileSocials />} />

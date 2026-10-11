@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Image, KeyRound, PauseCircle, Share2, Tag, Trash2, UserPen } from 'lucide-react'
+import { Image, KeyRound, ShieldCheck, PauseCircle, Share2, Tag, Trash2, UserPen } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { ActionItem, List } from '../components/ActionList'
@@ -64,6 +64,7 @@ export default function EditProfile() {
 
         <List>
           <ActionItem icon={<UserPen size={20} />} title="Nome de perfil e identificador" to="/conta/editar/nome" />
+          {user.level === 2 && <ActionItem icon={<ShieldCheck size={20} />} title="Verificar conta" to="/conta/editar/verificar" />}
           {isCreator && (
             <>
               <ActionItem icon={<Image size={20} />} title="Foto de capa e biografia" to="/conta/editar/capa" />

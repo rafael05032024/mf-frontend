@@ -91,6 +91,8 @@ export interface User {
   createdAt: string
   balanceFt: number
   creatorStatus: CreatorStatus
+  /** Nível da conta em /accounts/me: 1 comum, 2 publicador sem documentos verificados, acima disso verificado */
+  level?: number
   paused?: boolean
   creator?: CreatorInfo
   posts: Media[]

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle2, Info, XCircle } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { eventName, getMe, mediaUrl, subscribeEvents } from '../api'
@@ -29,12 +29,22 @@ const Notice = styled.div<{ $tone: 'ok' | 'error' }>`
 
 /** Escuta o resultado da verificação de documentos (prova de vida) enviado pelo WebSocket */
 export function LivenessEvents() {
-  const { user, applyVerified, applyProfile } = useApp()
+  const { user, applyLevel, applyProfile } = useApp()
   const [result, setResult] = useState<'approved' | 'rejected' | null>(null)
   const email = user?.email
   const navigate = useNavigate()
   const pathRef = useRef('')
-  pathRef.current = useLocation().pathname
+  const location = useLocation()
+  pathRef.current = location.pathname
+  const [limitsOpen, setLimitsOpen] = useState(false)
+
+  // cadastro de publicador sem verificação (BecomeCreator): avisa os limites da conta na tela inicial
+  const preRegistered = (location.state as { preRegistered?: boolean } | null)?.preRegistered === true
+  useEffect(() => {
+    if (!preRegistered) return
+    setLimitsOpen(true)
+    navigate(location.pathname, { replace: true, state: null })
+  }, [preRegistered, location.pathname, navigate])
 
   useEffect(() => {
     if (!email) return
@@ -43,18 +53,18 @@ export function LivenessEvents() {
       if (name === 'liveness_request_rejected') setResult('rejected')
       else if (name === 'liveness_request_approved') {
         setResult('approved')
-        if (pathRef.current === '/conta/criador') navigate('/', { replace: true })
-        // a conta passa a ter verified = true
+        if (pathRef.current === '/conta/criador' || pathRef.current === '/conta/editar/verificar') navigate('/', { replace: true })
+        // a conta passa a ter level maior que 1
         getMe()
           .then(me => {
-            applyVerified(email, me.verified === true)
+            applyLevel(email, me.level ?? 1)
             // atualiza nome, @ e foto de perfil e capa (header, /conta e /conta/editar)
             applyProfile(email, me.profile.replace(/^@/, ''), { name: me.name, avatar: mediaUrl(me.thumb), cover: mediaUrl(me.cover_photo) })
           })
           .catch(() => {})
       }
     })
-  }, [email, applyVerified, applyProfile, navigate])
+  }, [email, applyLevel, applyProfile, navigate])
 
   return (
     <>
@@ -66,11 +76,22 @@ export function LivenessEvents() {
           <Button onClick={() => setResult(null)}>Fechar</Button>
         </Notice>
       </Modal>
+      <Modal open={limitsOpen} onClose={() => setLimitsOpen(false)} label="Conta sem verificação" width={380}>
+        <Notice $tone="ok">
+          <span className="icon"><Info size={44} aria-hidden /></span>
+          <h2>Conta sem verificação</h2>
+          <Muted>
+            Ao se cadastrar sem verificar seus documentos, sua conta terá limites no número de postagens e de assinaturas ao seu perfil.
+            Conclua a verificação quando quiser para remover esses limites.
+          </Muted>
+          <Button onClick={() => setLimitsOpen(false)}>Entendi</Button>
+        </Notice>
+      </Modal>
       <Modal open={result === 'approved'} onClose={() => setResult(null)} label="Documentos aceitos" width={380}>
         <Notice $tone="ok">
           <span className="icon"><CheckCircle2 size={44} aria-hidden /></span>
           <h2>Documentos aceitos</h2>
-          <Muted>Seus documentos foram aceitos. Você já pode vender conteúdos na plataforma.</Muted>
+          <Muted>Seus documentos foram aceitos.</Muted>
           <Button onClick={() => setResult(null)}>Continuar</Button>
         </Notice>
       </Modal>
