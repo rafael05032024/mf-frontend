@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react'
-import { AlertCircle, Mail } from 'lucide-react'
+import { Mail } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { Field } from '../components/Field'
 import { InputGroup } from '../components/InputGroup'
 import { PasswordInput } from '../components/PasswordInput'
-import { Alert, Button, Input, Muted, Stack, Title } from '../components/ui'
+import { useToast } from '../components/Toast'
+import { Button, Input, Muted, Stack, Title } from '../components/ui'
 import { useSignIn } from '../store/useSignIn'
 import { AuthShell } from './AuthShell'
 
@@ -23,20 +24,19 @@ export default function Login() {
   const signIn = useSignIn()
   const navigate = useNavigate()
   const location = useLocation()
+  const toast = useToast()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (loading) return
-    if (!identifier.trim() || !password) return setError('Preencha e-mail/perfil e senha.')
-    setError('')
+    if (!identifier.trim() || !password) return toast({ title: 'Preencha e-mail/perfil e senha.', tone: 'danger' })
     setLoading(true)
     const r = await signIn(identifier, password)
     setLoading(false)
-    if (!r.ok) return setError(r.error)
+    if (!r.ok) return toast({ title: r.error, tone: 'danger' })
     navigate((location.state as { from?: string } | null)?.from ?? '/', { replace: true })
   }
 
@@ -48,11 +48,6 @@ export default function Login() {
             <Title>Entrar</Title>
             <Muted>Que bom te ver de novo!</Muted>
           </div>
-          {error && (
-            <Alert $tone="danger" role="alert">
-              <AlertCircle size={18} /> {error}
-            </Alert>
-          )}
           <Field label="E-mail ou perfil">
             <InputGroup leftIcon={<Mail size={18} />}>
               <Input value={identifier} onChange={e => setIdentifier(e.target.value)} autoComplete="username" placeholder="voce@email.com ou @perfil" />

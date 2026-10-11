@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { AlertCircle, AtSign, CheckCircle2, Mail, User } from 'lucide-react'
+import { AtSign, CheckCircle2, Mail, User } from 'lucide-react'
 import styled from 'styled-components'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { createAccount, loginRequest, sendVerificationCode } from '../api'
@@ -8,6 +8,7 @@ import { CodeInput } from '../components/CodeInput'
 import { Field } from '../components/Field'
 import { InputGroup } from '../components/InputGroup'
 import { PasswordInput } from '../components/PasswordInput'
+import { useToast } from '../components/Toast'
 import { Alert, Button, Input, Muted, Stack, Title } from '../components/ui'
 import { useApp } from '../store/AppContext'
 import { HANDLE_RE, isEmail, normalizeHandle } from '../utils/format'
@@ -31,9 +32,9 @@ export default function Register() {
   const { register, login, handleAvailable } = useApp()
   const navigate = useNavigate()
   const location = useLocation()
+  const toast = useToast()
   const [form, setForm] = useState({ name: '', email: '', handle: '', password: '' })
   const [errors, setErrors] = useState<Errors>({})
-  const [formError, setFormError] = useState('')
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<'form' | 'code'>('form')
   const [code, setCode] = useState('')
@@ -72,14 +73,17 @@ export default function Register() {
     if (loading || redirecting) return
     const er = validate()
     setErrors(er)
-    if (Object.keys(er).length) return
-    setFormError('')
+    if (Object.keys(er).length) {
+      const first = Object.values(er).find(Boolean)
+      if (first) toast({ title: first, tone: 'danger' })
+      return
+    }
     setLoading(true)
     try {
       await sendVerificationCode(form.name.trim(), form.email.trim())
     } catch (err) {
       setLoading(false)
-      return setFormError(err instanceof Error ? err.message : 'Não foi possível enviar o código.')
+      return toast({ title: err instanceof Error ? err.message : 'Não foi possível enviar o código.', tone: 'danger' })
     }
     setLoading(false)
     setCode('')
@@ -96,7 +100,7 @@ export default function Register() {
       await sendVerificationCode(form.name.trim(), form.email.trim())
       setResent(true)
     } catch (err) {
-      setCodeError(err instanceof Error ? err.message : 'Não foi possível reenviar o código.')
+      toast({ title: err instanceof Error ? err.message : 'Não foi possível reenviar o código.', tone: 'danger' })
     }
     setLoading(false)
   }
@@ -104,7 +108,7 @@ export default function Register() {
   const confirm = async (e: FormEvent) => {
     e.preventDefault()
     if (loading || redirecting) return
-    if (!/^\d{6}$/.test(code)) return setCodeError('Digite os 6 dígitos do código.')
+    if (!/^\d{6}$/.test(code)) return toast({ title: 'Digite os 6 dígitos do código.', tone: 'danger' })
     setCodeError('')
     setLoading(true)
     try {
@@ -112,12 +116,11 @@ export default function Register() {
       await loginRequest(form.email.trim(), form.password)
     } catch (err) {
       setLoading(false)
-      return setCodeError(err instanceof Error ? err.message : 'Não foi possível criar a conta.')
+      return toast({ title: err instanceof Error ? err.message : 'Não foi possível criar a conta.', tone: 'danger' })
     }
     setLoading(false)
     setRedirecting(true)
     const to = (location.state as { from?: string } | null)?.from ?? '/'
-    // A sessão local só é criada no fim: GuestOnly redireciona quem já está logado e fecharia o modal
     timer.current = window.setTimeout(() => {
       const r = register(form)
       if (!r.ok) login(form.email, form.password)
@@ -144,11 +147,6 @@ export default function Register() {
               <Title>Verifique seu e-mail</Title>
               <Muted>Enviamos um código de 6 dígitos para <b>{form.email.trim()}</b>.</Muted>
             </div>
-            {codeError && (
-              <Alert $tone="danger" role="alert">
-                <AlertCircle size={18} /> {codeError}
-              </Alert>
-            )}
             {resent && !codeError && <Alert $tone="success" role="status">Novo código enviado.</Alert>}
             <Field label="Código de verificação" float={false}>
               <CodeInput value={code} onChange={v => { setCode(v); setCodeError('') }} autoFocus />
@@ -168,11 +166,6 @@ export default function Register() {
             <Title>Criar conta</Title>
             <Muted>Leva menos de um minuto.</Muted>
           </div>
-          {formError && (
-            <Alert $tone="danger" role="alert">
-              <AlertCircle size={18} /> {formError}
-            </Alert>
-          )}
           <Field label="Nome" error={errors.name}>
             <InputGroup leftIcon={<User size={18} />}>
               <Input value={form.name} onChange={set('name')} autoComplete="name" placeholder="Como você se chama?" />

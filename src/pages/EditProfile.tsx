@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Image, KeyRound, ShieldCheck, PauseCircle, Share2, Tag, Trash2, UserPen } from 'lucide-react'
+import { BadgeDollarSign, Image, KeyRound, ShieldCheck, PauseCircle, Share2, Trash2, UserPen } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { ActionItem, List } from '../components/ActionList'
@@ -68,7 +68,7 @@ export default function EditProfile() {
           {isCreator && (
             <>
               <ActionItem icon={<Image size={20} />} title="Foto de capa e biografia" to="/conta/editar/capa" />
-              <ActionItem icon={<Tag size={20} />} title="Assinatura" to="/conta/editar/assinatura" />
+              <ActionItem icon={<BadgeDollarSign size={20} />} title="Assinatura" to="/conta/editar/assinatura" />
               <ActionItem icon={<Share2 size={20} />} title="Redes sociais" to="/conta/editar/redes" />
             </>
           )}

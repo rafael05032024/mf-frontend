@@ -1,13 +1,23 @@
-import { connectEvents, getToken, setToken } from '../api'
+import { connectEvents, eventName, getToken, listNotifications, markNotificationRead, setToken } from '../api'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { mockProfiles } from '../data/mock'
-import type { CreatorInfo, Media, Profile, User } from '../types'
+import type { AppNotification, CreatorInfo, Media, Profile, User } from '../types'
 import { addDays, brlToFt, formatBRL, formatFt, HANDLE_RE, normalizeHandle, uid } from '../utils/format'
 import { buildStats, seedAccounts } from './seed'
 import { load, save } from './storage'
 
 const ACCOUNTS_KEY = 'myfoot:accounts'
 const SESSION_KEY = 'myfoot:session'
+
+const NOTIFY_EVENTS = new Set([
+  'liveness_request_in_review',
+  'liveness_request_approved',
+  'liveness_request_rejected',
+  'liveness_request_rejectd',
+  'walleted_recharged',
+  'new_subscriber',
+  'new_subscription',
+])
 
 type Result = { ok: true } | { ok: false; error: string }
 
@@ -40,7 +50,11 @@ interface AppState {
   withdraw: (ft: number) => Result
   submitCreator: (data: CreatorSubmission) => Result
   addPost: (post: Omit<Media, 'id' | 'createdAt'>) => Result
+  /** Notificações locais somadas às do backend, da mais recente para a mais antiga */
+  notifications: AppNotification[]
   markNotificationsRead: () => void
+  /** Marca uma notificação como lida (as do backend via PATCH /api/notifications/{id}/read) */
+  readNotification: (id: string) => void
   handleAvailable: (handle: string) => boolean
   /** Aplica o `level` de /accounts/me: maior que 1 exibe a plataforma na visão de publicador */
   applyLevel: (email: string, level: number) => void
@@ -82,10 +96,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const eventProfile = user && getToken() ? user.handle : null
 
   // WebSocket de eventos do perfil, aberto enquanto houver sessão autenticada na API
+  const [remoteNotifications, setRemoteNotifications] = useState<AppNotification[]>([])
+
   useEffect(() => {
-    if (!eventProfile) return
-    return connectEvents(eventProfile, data => console.debug('[event]', data))
+    if (!eventProfile) {
+      setRemoteNotifications([])
+      return
+    }
+    let active = true
+    const refresh = () =>
+      listNotifications()
+        .then(list => {
+          if (!active) return
+          setRemoteNotifications(
+            list.map(n => ({ id: `api-${n.id}`, message: n.text, date: n.createdAt, read: n.read, icon: n.icon, title: n.title, type: n.type })),
+          )
+        })
+        .catch(() => {})
+    refresh() // login / sessão restaurada
+    const disconnect = connectEvents(eventProfile, data => {
+      console.debug('[event]', data)
+      const name = eventName(data)
+      if (name && NOTIFY_EVENTS.has(name)) refresh()
+    })
+    return () => {
+      active = false
+      disconnect()
+    }
   }, [eventProfile])
+
+  const notifications = useMemo(
+    () =>
+      [...remoteNotifications, ...(user?.notifications ?? [])].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      ),
+    [remoteNotifications, user],
+  )
 
   const patchUser = useCallback((id: string, fn: (u: User) => User) => {
     setAccounts(prev => prev.map(a => (a.id === id ? fn(a) : a)))
@@ -343,6 +389,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     patchUser(user.id, u => ({ ...u, notifications: u.notifications.map(n => ({ ...n, read: true })) }))
   }
 
+  const readNotification: AppState['readNotification'] = id => {
+    if (!user) return
+    if (!id.startsWith('api-')) {
+      patchUser(user.id, u => ({ ...u, notifications: u.notifications.map(n => (n.id === id ? { ...n, read: true } : n)) }))
+      return
+    }
+    const setRead = (read: boolean) =>
+      setRemoteNotifications(prev => prev.map(n => (n.id === id ? { ...n, read } : n)))
+    if (remoteNotifications.find(n => n.id === id)?.read !== false) return
+    setRead(true)
+    markNotificationRead(Number(id.slice(4))).catch(() => setRead(false))
+  }
+
   const value: AppState = {
     user,
     profiles,
@@ -360,7 +419,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     withdraw,
     submitCreator,
     addPost,
+    notifications,
     markNotificationsRead,
+    readNotification,
     handleAvailable,
     applyLevel,
     applyProfile,

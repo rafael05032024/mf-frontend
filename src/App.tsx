@@ -9,6 +9,7 @@ import Register from './pages/Register'
 
 const ProfileDetail = lazy(() => import('./pages/ProfileDetail'))
 const Account = lazy(() => import('./pages/Account'))
+const Notifications = lazy(() => import('./pages/Notifications'))
 const Subscriptions = lazy(() => import('./pages/Subscriptions'))
 const EditProfile = lazy(() => import('./pages/EditProfile'))
 const EditProfileName = lazy(() => import('./pages/EditProfileName'))
@@ -40,6 +41,7 @@ export default function App() {
           </Route>
           <Route element={<ProtectedLayout />}>
             <Route path="/conta" element={<Account />} />
+            <Route path="/conta/notificacoes" element={<Notifications />} />
             <Route path="/conta/assinaturas" element={<Subscriptions />} />
             <Route path="/conta/editar" element={<EditProfile />} />
             <Route path="/conta/editar/nome" element={<EditProfileName />} />

@@ -73,3 +73,19 @@ export const ageFrom = (isoDate: string) => {
 }
 
 export const addDays = (d: Date, days: number) => new Date(d.getTime() + days * 86400000)
+
+/** Converte o nome de ícone lucide (PascalCase ou kebab-case) para kebab-case */
+export const toIconName = (name: string) => name.replace(/([a-z])([A-Z0-9])/g, '$1-$2').toLowerCase()
+
+/** Cores do ícone da notificação por tipo: 1 = verde, 2 = vermelho, 3 = amarelo */
+export const notificationColors = (
+  type: number | undefined,
+  c: { success: string; successSoft: string; danger: string; dangerSoft: string; warning: string; warningSoft: string; primaryText: string; primarySoft: string },
+) =>
+  type === 1
+    ? { color: c.success, background: c.successSoft }
+    : type === 2
+      ? { color: c.danger, background: c.dangerSoft }
+      : type === 3
+        ? { color: c.warning, background: c.warningSoft }
+        : { color: c.primaryText, background: c.primarySoft }

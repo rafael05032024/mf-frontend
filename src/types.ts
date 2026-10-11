@@ -54,6 +54,9 @@ export interface AppNotification {
   date: string
   read: boolean
   link?: string
+  icon?: string
+  title?: string
+  type?: number
 }
 
 export interface CreatorInfo {

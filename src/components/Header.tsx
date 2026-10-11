@@ -1,10 +1,11 @@
+import { DynamicIcon, type IconName } from 'lucide-react/dynamic'
 import { useEffect, useRef, useState } from 'react'
 import { Bell, ImagePlus } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { useApp } from '../store/AppContext'
 import { mq } from '../styles/theme'
-import { relativeTime } from '../utils/format'
+import { notificationColors, relativeTime, toIconName } from '../utils/format'
 import { Avatar } from './Avatar'
 import { LogoMark } from './icons'
 import { Button, IconButton } from './ui'
@@ -112,6 +113,17 @@ const NotifItem = styled.button<{ $unread: boolean }>`
   small { display: block; color: ${({ theme }) => theme.colors.grayText}; margin-top: 2px; font-size: 12px; }
 `
 
+const NotifIcon = styled.span<{ $type?: number }>`
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: ${({ $type, theme }) => notificationColors($type, theme.colors).color};
+  background: ${({ $type, theme }) => notificationColors($type, theme.colors).background};
+`
+
 const Empty = styled.p`
   padding: 24px 16px;
   text-align: center;
@@ -127,8 +139,10 @@ const ProfileLink = styled(Link)`
   border-radius: 50%;
 `
 
+const truncate = (text: string, max: number) => (text.length > max ? `${text.slice(0, max).trimEnd()}...` : text)
+
 export function Header() {
-  const { user, markNotificationsRead } = useApp()
+  const { user, notifications, markNotificationsRead } = useApp()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -164,7 +178,8 @@ export function Header() {
       </Bar>
     )
   }
-  const unread = user.notifications.filter(n => !n.read).length
+  const unreadList = notifications.filter(n => !n.read)
+  const unread = unreadList.length
   const isCreator = user.creatorStatus === 'verified'
 
   const toggle = () => {
@@ -197,22 +212,27 @@ export function Header() {
           {open && (
             <Popover>
               <h2>Notificações</h2>
-              {user.notifications.length === 0 ? (
-                <Empty>Nenhuma notificação por aqui.</Empty>
+              {unreadList.length === 0 ? (
+                <Empty>Nenhuma notificação nova.</Empty>
               ) : (
                 <ul>
-                  {user.notifications.slice(0, 20).map(n => (
+                  {unreadList.slice(0, 5).map(n => (
                     <li key={n.id}>
                       <NotifItem
                         $unread={!n.read}
                         onClick={() => {
                           setOpen(false)
                           markNotificationsRead()
-                          if (n.link) navigate(n.link)
+                          navigate('/conta/notificacoes')
                         }}
                       >
+                        {n.icon && (
+                          <NotifIcon $type={n.type} aria-hidden>
+                            <DynamicIcon name={toIconName(n.icon) as IconName} size={18} fallback={() => <Bell size={18} />} />
+                          </NotifIcon>
+                        )}
                         <div>
-                          {n.message}
+                          {n.title ?? truncate(n.message, 50)}
                           <small>{relativeTime(n.date)}</small>
                         </div>
                       </NotifItem>

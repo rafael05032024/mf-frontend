@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BarChart3, CreditCard, Eye, Hourglass, ListChecks, LogOut, Settings, Sparkles } from 'lucide-react'
+import { BarChart3, CreditCard, Eye, Bell, Hourglass, ListChecks, LogOut, Settings, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { getActiveSubscriptionsCount, getBalance } from '../api'
@@ -52,7 +52,8 @@ const Creator = styled.section`
 
 export default function Account() {
   const user = useAuthedUser()
-  const { logout } = useApp()
+  const { logout, notifications } = useApp()
+  const unread = notifications.filter(n => !n.read).length
   const navigate = useNavigate()
   const isCreator = user.creatorStatus === 'verified'
   const [balance, setBalance] = useState<number | null>(null)
@@ -124,6 +125,12 @@ export default function Account() {
             title="Minhas assinaturas"
             subtitle={activeSubs === null ? '...' : activeSubs === 1 ? '1 assinatura ativa' : `${activeSubs} assinaturas ativas`}
             to="/conta/assinaturas"
+          />
+          <ActionItem
+            icon={<Bell size={20} />}
+            title="Notificações"
+            subtitle={unread === 0 ? 'Nenhuma nova' : unread === 1 ? '1 não lida' : `${unread} não lidas`}
+            to="/conta/notificacoes"
           />
           <ActionItem icon={<Settings size={20} />} title="Configurações do perfil" to="/conta/editar" />
         </List>

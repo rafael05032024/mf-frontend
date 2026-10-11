@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
-import { CheckCircle2, Info, X } from 'lucide-react'
+import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react'
 import styled, { keyframes } from 'styled-components'
 import { mq } from '../styles/theme'
 
-type Tone = 'success' | 'info'
+type Tone = 'success' | 'info' | 'danger'
 interface ToastItem {
   id: number
   title: string
@@ -19,7 +19,7 @@ const shrink = keyframes`from { transform: scaleX(1) } to { transform: scaleX(0)
 
 const Region = styled.div`
   position: fixed;
-  top: calc(${({ theme }) => theme.headerHeight} + 12px);
+  top: 12px;
   left: 12px;
   right: 12px;
   z-index: 200;
@@ -30,7 +30,11 @@ const Region = styled.div`
   ${mq.sm} { left: auto; right: 24px; width: 380px; }
 `
 
+const toneColor = (tone: Tone, theme: Record<string, any>) =>
+  tone === 'success' ? theme.colors.success : tone === 'danger' ? theme.colors.danger : theme.colors.primary
+
 const Item = styled.div<{ $tone: Tone }>`
+  --toast-color: ${({ $tone, theme }) => toneColor($tone, theme)};
   pointer-events: auto;
   position: relative;
   overflow: hidden;
@@ -41,9 +45,9 @@ const Item = styled.div<{ $tone: Tone }>`
   border-radius: ${({ theme }) => theme.radius.md};
   background: ${({ theme }) => theme.colors.white};
   box-shadow: ${({ theme }) => theme.shadow.lg};
-  border-left: 4px solid ${({ $tone, theme }) => ($tone === 'success' ? theme.colors.success : theme.colors.primary)};
+  border-left: 4px solid var(--toast-color);
   animation: ${slide} 0.25s ease;
-  > svg { flex-shrink: 0; color: ${({ $tone, theme }) => ($tone === 'success' ? theme.colors.success : theme.colors.primaryText)}; }
+  > svg { flex-shrink: 0; color: var(--toast-color); }
   strong { display: block; font-size: 15px; }
   p { font-size: 14px; color: ${({ theme }) => theme.colors.dark}; margin-top: 2px; }
 `
@@ -55,7 +59,7 @@ const Bar = styled.span<{ $ms: number }>`
   height: 3px;
   width: 100%;
   transform-origin: left;
-  background: ${({ theme }) => theme.colors.primary};
+  background: var(--toast-color);
   animation: ${shrink} ${({ $ms }) => $ms}ms linear forwards;
 `
 
@@ -90,7 +94,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <Region role="status" aria-live="polite">
         {items.map(t => (
           <Item key={t.id} $tone={t.tone}>
-            {t.tone === 'success' ? <CheckCircle2 size={22} /> : <Info size={22} />}
+            {t.tone === 'success' ? <CheckCircle2 size={22} /> : t.tone === 'danger' ? <AlertCircle size={22} /> : <Info size={22} />}
             <div>
               <strong>{t.title}</strong>
               {t.message && <p>{t.message}</p>}
