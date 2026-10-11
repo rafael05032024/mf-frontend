@@ -84,12 +84,15 @@ function shouldDisableFloat(child: ReactElement<Record<string, unknown>>): boole
 
 function extractValue(child: ReactElement<Record<string, unknown>>): unknown {
   const props = child.props as Record<string, unknown>
+  if (props.type === 'date') return '__date__'
   if (props.value !== undefined) return props.value
   const name = getDisplayName(child)
   if (name === 'InputGroup') {
     const inner = props.children as ReactElement<Record<string, unknown>> | undefined
     if (inner && typeof inner === 'object' && 'props' in inner) {
-      return (inner.props as Record<string, unknown>).value
+      const innerProps = inner.props as Record<string, unknown>
+      if (innerProps.type === 'date') return '__date__'
+      return innerProps.value
     }
   }
   return undefined

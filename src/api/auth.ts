@@ -16,6 +16,22 @@ export function sendVerificationCode(name: string, email: string) {
   return api.post<unknown>('/api/accounts/verification-code', { name, email })
 }
 
+/** Envia o código de recuperação de senha por e-mail */
+export function sendPasswordResetCode(email: string) {
+  return api.post<unknown>('/api/accounts/password-reset/code', { email })
+}
+
+/** Valida o código de 6 dígitos recebido por e-mail; retorna o id da sessão de redefinição */
+export async function verifyPasswordResetCode(email: string, code: string) {
+  const { sessionId } = await api.post<{ sessionId: string }>('/api/accounts/password-reset/verify-code', { email, code })
+  return sessionId
+}
+
+/** Redefine a senha usando o id da sessão obtido na verificação do código */
+export function resetPassword(sessionId: string, password: string) {
+  return api.put<void>('/api/accounts/password-reset', { password }, { headers: { 'x-session-id': sessionId } })
+}
+
 export function createAccount(payload: RegisterPayload) {
   return api.post<unknown>('/api/accounts', payload)
 }

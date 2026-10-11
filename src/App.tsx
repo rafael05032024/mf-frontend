@@ -6,6 +6,7 @@ import { PageLoader } from './components/PageLoader'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
 
 const ProfileDetail = lazy(() => import('./pages/ProfileDetail'))
 const Account = lazy(() => import('./pages/Account'))
@@ -34,6 +35,7 @@ export default function App() {
           <Route element={<GuestOnly />}>
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Register />} />
+            <Route path="/esqueci-senha" element={<ForgotPassword />} />
           </Route>
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Home />} />

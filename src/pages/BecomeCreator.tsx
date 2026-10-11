@@ -200,7 +200,7 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
     try {
       await saveStep(stepId)
     } catch (e) {
-      toast({ title: 'Não foi possível salvar', message: e instanceof ApiError ? e.message : 'Tente novamente.' })
+      toast({ title: 'Não é possível prosseguir', message: e instanceof ApiError ? e.message : 'Tente novamente.', tone: 'danger' })
       return
     } finally {
       setSaving(false)
@@ -221,7 +221,7 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
       navigate('/', { replace: true, state: { preRegistered: true } })
     } catch (e) {
       skipped.current = false
-      toast({ title: 'Não foi possível prosseguir', message: e instanceof ApiError ? e.message : 'Tente novamente.' })
+      toast({ title: 'Não foi possível prosseguir', message: e instanceof ApiError ? e.message : 'Tente novamente.', tone: 'danger' })
     } finally {
       setSaving(false)
     }
@@ -232,7 +232,7 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
     try {
       await loadVerification()
     } catch (e) {
-      toast({ title: 'Não foi possível gerar o QRCode', message: e instanceof ApiError ? e.message : 'Tente novamente.' })
+      toast({ title: 'Não foi possível gerar o QRCode', message: e instanceof ApiError ? e.message : 'Tente novamente.', tone: 'danger' })
     } finally {
       setSaving(false)
     }

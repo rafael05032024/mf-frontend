@@ -56,6 +56,9 @@ export default function Login() {
           <Field label="Senha">
             <PasswordInput value={password} onChange={e => setPassword(e.target.value)} autoComplete="current-password" />
           </Field>
+          <Muted style={{ textAlign: 'right', marginTop: -8 }}>
+            <Link to="/esqueci-senha"><b>Esqueceu a senha?</b></Link>
+          </Muted>
           <Button type="submit" $block $size="lg" disabled={loading}>{loading ? 'Entrando...' : 'Entrar'}</Button>
           <Muted style={{ textAlign: 'center' }}>
             Ainda não tem conta? <Link to="/cadastro"><b>Cadastre-se</b></Link>
