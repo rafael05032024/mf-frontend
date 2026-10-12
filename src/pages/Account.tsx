@@ -108,7 +108,7 @@ export default function Account() {
           {isCreator && (
             <>
               <ActionItem icon={<Eye size={20} />} title="Ver perfil" subtitle="Veja seu perfil como seus assinantes" to={`/perfil/${user.handle}`} />
-              <ActionItem icon={<BarChart3 size={20} />} title="Controle" subtitle="Faturamento, assinantes e valor a receber" to="/conta/controle" />
+              <ActionItem icon={<BarChart3 size={20} />} title="Controle" subtitle="Faturamento, assinantes e valor a receber" readOnly />
             </>
           )}
           {user.creatorStatus === 'pending' && (

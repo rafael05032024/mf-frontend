@@ -8,6 +8,8 @@ import { CodeInput } from '../components/CodeInput'
 import { Field } from '../components/Field'
 import { InputGroup } from '../components/InputGroup'
 import { PasswordInput } from '../components/PasswordInput'
+import { PasswordChecklist } from '../components/PasswordChecklist'
+import { isPasswordValid, PASSWORD_ERROR } from '../utils/password'
 import { useToast } from '../components/Toast'
 import { Alert, Button, Input, Muted, Stack, Title } from '../components/ui'
 import { useApp } from '../store/AppContext'
@@ -64,7 +66,7 @@ export default function Register() {
     if (!isEmail(form.email)) er.email = 'Informe um e-mail válido.'
     if (!HANDLE_RE.test(form.handle)) er.handle = 'Use 3 a 20 caracteres: letras minúsculas, números, "." ou "_".'
     else if (!handleAvailable(form.handle)) er.handle = 'Este perfil já está em uso.'
-    if (form.password.length < 6) er.password = 'A senha deve ter pelo menos 6 caracteres.'
+    if (!isPasswordValid(form.password)) er.password = PASSWORD_ERROR
     return er
   }
 
@@ -181,9 +183,10 @@ export default function Register() {
               <Input value={form.handle} onChange={set('handle')} autoCapitalize="none" autoComplete="username" placeholder="seu.perfil" />
             </InputGroup>
           </Field>
-          <Field label="Senha" error={errors.password} hint="Mínimo de 6 caracteres">
+          <Field label="Senha" error={errors.password}>
             <PasswordInput value={form.password} onChange={set('password')} autoComplete="new-password" />
           </Field>
+          <PasswordChecklist value={form.password} />
           <Button type="submit" $block $size="lg" disabled={loading || redirecting}>{loading ? 'Enviando código...' : 'Continuar'}</Button>
           <Muted style={{ textAlign: 'center' }}>
             Já tem conta? <Link to="/login"><b>Entrar</b></Link>

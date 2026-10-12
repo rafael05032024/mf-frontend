@@ -6,6 +6,8 @@ import { CodeInput } from '../components/CodeInput'
 import { Field } from '../components/Field'
 import { InputGroup } from '../components/InputGroup'
 import { PasswordInput } from '../components/PasswordInput'
+import { PasswordChecklist } from '../components/PasswordChecklist'
+import { isPasswordValid, PASSWORD_ERROR } from '../utils/password'
 import { useToast } from '../components/Toast'
 import { Alert, Button, Input, Muted, Stack, Title } from '../components/ui'
 import { isEmail } from '../utils/format'
@@ -68,7 +70,7 @@ export default function ForgotPassword() {
     e.preventDefault()
     if (loading) return
     const er: typeof errors = {}
-    if (form.next.length < 6) er.next = 'A senha deve ter pelo menos 6 caracteres.'
+    if (!isPasswordValid(form.next)) er.next = PASSWORD_ERROR
     if (form.confirm !== form.next) er.confirm = 'As senhas não coincidem.'
     setErrors(er)
     if (Object.keys(er).length) return
@@ -139,9 +141,10 @@ export default function ForgotPassword() {
               <Title>Nova senha</Title>
               <Muted>Escolha uma nova senha para sua conta.</Muted>
             </div>
-            <Field label="Nova senha" error={errors.next} hint="Mínimo de 6 caracteres">
+            <Field label="Nova senha" error={errors.next}>
               <PasswordInput value={form.next} onChange={setField('next')} autoComplete="new-password" autoFocus />
             </Field>
+            <PasswordChecklist value={form.next} />
             <Field label="Confirmar senha" error={errors.confirm}>
               <PasswordInput value={form.confirm} onChange={setField('confirm')} autoComplete="new-password" />
             </Field>

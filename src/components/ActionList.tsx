@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Info } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 
@@ -38,6 +38,42 @@ const ItemButton = styled.button`
   &:hover { background: ${({ theme }) => theme.colors.light}; }
 `
 
+const ItemStatic = styled.div`
+  ${itemStyles}
+  color: ${({ theme }) => theme.colors.black};
+  cursor: default;
+`
+
+const Dimmed = styled.span`
+  display: contents;
+  & > ${ItemStatic} > span:not([data-hint]) { opacity: .55; }
+`
+
+const Hint = styled.span`
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: ${({ theme }) => theme.colors.grayText};
+  cursor: help;
+  &::after {
+    content: attr(data-hint);
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 6px);
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: ${({ theme }) => theme.colors.black};
+    color: ${({ theme }) => theme.colors.white};
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .15s ease;
+  }
+  &:hover::after, &:focus-visible::after { opacity: 1; }
+`
+
 const IconBox = styled.span<{ $tone?: 'primary' | 'danger' | 'neutral' }>`
   flex-shrink: 0;
   display: grid;
@@ -66,9 +102,29 @@ interface ItemProps {
   onClick?: () => void
   tone?: 'primary' | 'danger' | 'neutral'
   trailing?: ReactNode
+  readOnly?: boolean
+  readOnlyHint?: string
 }
 
-export function ActionItem({ icon, title, subtitle, to, onClick, tone, trailing }: ItemProps) {
+export function ActionItem({ icon, title, subtitle, to, onClick, tone, trailing, readOnly, readOnlyHint = 'Em Breve' }: ItemProps) {
+  if (readOnly) {
+    return (
+      <li>
+        <Dimmed>
+          <ItemStatic aria-disabled="true">
+            <IconBox $tone={tone} aria-hidden>{icon}</IconBox>
+            <Text>
+              <strong>{title}</strong>
+              {subtitle && <small>{subtitle}</small>}
+            </Text>
+            <Hint data-hint={readOnlyHint} tabIndex={0} role="img" aria-label={readOnlyHint}>
+              <Info size={20} />
+            </Hint>
+          </ItemStatic>
+        </Dimmed>
+      </li>
+    )
+  }
   const content = (
     <>
       <IconBox $tone={tone} aria-hidden>{icon}</IconBox>

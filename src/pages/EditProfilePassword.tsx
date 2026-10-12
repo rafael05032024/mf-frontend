@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom'
 import { Field } from '../components/Field'
 import { PageHeader } from '../components/PageHeader'
 import { PasswordInput } from '../components/PasswordInput'
+import { PasswordChecklist } from '../components/PasswordChecklist'
+import { isPasswordValid, PASSWORD_ERROR } from '../utils/password'
 import { useToast } from '../components/Toast'
 import { Alert, Button, Card, NarrowContainer, Stack } from '../components/ui'
 import { resetPassword } from '../api'
@@ -24,7 +26,7 @@ export default function EditProfilePassword() {
     e.preventDefault()
     if (loading) return
     const er: Errors = {}
-    if (form.next.length < 6) er.next = 'A senha deve ter pelo menos 6 caracteres.'
+    if (!isPasswordValid(form.next)) er.next = PASSWORD_ERROR
     if (form.confirm !== form.next) er.confirm = 'As senhas não coincidem.'
     setErrors(er)
     setFormError('')
@@ -49,9 +51,10 @@ export default function EditProfilePassword() {
           {formError && <Alert $tone="danger" role="alert"><AlertCircle size={18} /> {formError}</Alert>}
           <Card>
             <Stack>
-              <Field label="Nova senha" error={errors.next} hint="Mínimo de 6 caracteres">
+              <Field label="Nova senha" error={errors.next}>
                 <PasswordInput value={form.next} onChange={set('next')} autoComplete="new-password" />
               </Field>
+              <PasswordChecklist value={form.next} />
               <Field label="Confirmar nova senha" error={errors.confirm}>
                 <PasswordInput value={form.confirm} onChange={set('confirm')} autoComplete="new-password" />
               </Field>
