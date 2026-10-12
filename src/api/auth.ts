@@ -40,6 +40,8 @@ export function createAccount(payload: RegisterPayload) {
 }
 
 export interface Me {
+  /** Id do usuário logado */
+  id: number
   name: string
   profile: string
   thumb: string | null

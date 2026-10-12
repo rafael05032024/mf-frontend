@@ -4,6 +4,7 @@ import { useApp } from '../store/AppContext'
 import { Header } from './Header'
 import { PageLoader } from './PageLoader'
 import { RouteTransition } from './RouteTransition'
+import { SupportChat } from './SupportChat'
 
 export function ProtectedLayout() {
   const { user } = useApp()
@@ -17,6 +18,7 @@ export function ProtectedLayout() {
           <Outlet />
         </Suspense>
       </RouteTransition>
+      <SupportChat />
     </>
   )
 }
@@ -30,6 +32,7 @@ export function PublicLayout() {
           <Outlet />
         </Suspense>
       </RouteTransition>
+      <SupportChat />
     </>
   )
 }
