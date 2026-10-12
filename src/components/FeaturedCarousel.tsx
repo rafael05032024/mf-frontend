@@ -133,8 +133,12 @@ export function FeaturedCarousel({ profiles }: { profiles: ProfileSummary[] }) {
     <section aria-roledescription="carrossel" aria-label="Perfis em destaque">
       <SectionTitle style={{ marginBottom: 12 }}>Em destaque</SectionTitle>
       <Wrap>
-        <NavButton $side="left" onClick={() => scroll(-1)} aria-label="Destaques anteriores"><ChevronLeft size={20} /></NavButton>
-        <NavButton $side="right" onClick={() => scroll(1)} aria-label="Próximos destaques"><ChevronRight size={20} /></NavButton>
+        {profiles.length > 3 && (
+          <>
+            <NavButton $side="left" onClick={() => scroll(-1)} aria-label="Destaques anteriores"><ChevronLeft size={20} /></NavButton>
+            <NavButton $side="right" onClick={() => scroll(1)} aria-label="Próximos destaques"><ChevronRight size={20} /></NavButton>
+          </>
+        )}
       <Track ref={ref}>
         {profiles.map((p, i) => (
           <li key={p.handle} aria-roledescription="slide" aria-label={`${i + 1} de ${profiles.length}`}>

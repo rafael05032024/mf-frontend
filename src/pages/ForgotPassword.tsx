@@ -74,7 +74,7 @@ export default function ForgotPassword() {
     if (Object.keys(er).length) return
     setLoading(true)
     try {
-      await resetPassword(sessionId, form.next)
+      await resetPassword(form.next, sessionId)
     } catch (err) {
       setLoading(false)
       // sessão inválida/expirada: volta para o passo do código

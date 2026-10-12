@@ -27,9 +27,12 @@ export async function verifyPasswordResetCode(email: string, code: string) {
   return sessionId
 }
 
-/** Redefine a senha usando o id da sessão obtido na verificação do código */
-export function resetPassword(sessionId: string, password: string) {
-  return api.put<void>('/api/accounts/password-reset', { password }, { headers: { 'x-session-id': sessionId } })
+/**
+ * Redefine a senha. No fluxo "esqueci a senha" usa o id da sessão obtido na verificação do código;
+ * na tela Alterar senha (usuário logado) o sessionId é omitido e o token JWT é enviado pelo client.
+ */
+export function resetPassword(password: string, sessionId?: string) {
+  return api.put<void>('/api/accounts/password-reset', { password }, sessionId ? { headers: { 'x-session-id': sessionId } } : undefined)
 }
 
 export function createAccount(payload: RegisterPayload) {

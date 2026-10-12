@@ -20,7 +20,9 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown
 }
 
-// Chamado quando a API responde 401 (ex.: deslogar o usuário)
+const SESSION_EXPIRED_MESSAGES = ['Token inválido ou expirado', 'Token ausente']
+
+// Chamado quando a API responde 401 por token inválido, expirado ou ausente
 let onUnauthorized: (() => void) | null = null
 export function setUnauthorizedHandler(handler: (() => void) | null) {
   onUnauthorized = handler
@@ -69,11 +71,11 @@ async function request<T>(path: string, { query, body, headers, ...init }: Reque
   }
 
   if (!res.ok) {
-    if (res.status === 401) onUnauthorized?.()
     const msg =
       data && typeof data === 'object' && 'message' in data
         ? String((data as { message: unknown }).message)
         : `Erro ${res.status}`
+    if (res.status === 401 && SESSION_EXPIRED_MESSAGES.includes(msg.trim())) onUnauthorized?.()
     throw new ApiError(res.status, msg, data)
   }
 

@@ -6,30 +6,37 @@ import { PageHeader } from '../components/PageHeader'
 import { PasswordInput } from '../components/PasswordInput'
 import { useToast } from '../components/Toast'
 import { Alert, Button, Card, NarrowContainer, Stack } from '../components/ui'
-import { useApp } from '../store/AppContext'
+import { resetPassword } from '../api'
 
 type Errors = Partial<Record<'next' | 'confirm', string>>
 
 export default function EditProfilePassword() {
-  const { changePassword } = useApp()
   const toast = useToast()
   const navigate = useNavigate()
   const [form, setForm] = useState({ next: '', confirm: '' })
   const [errors, setErrors] = useState<Errors>({})
   const [formError, setFormError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, [k]: e.target.value }))
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
+    if (loading) return
     const er: Errors = {}
     if (form.next.length < 6) er.next = 'A senha deve ter pelo menos 6 caracteres.'
     if (form.confirm !== form.next) er.confirm = 'As senhas não coincidem.'
     setErrors(er)
     setFormError('')
     if (Object.keys(er).length) return
-    const r = changePassword(form.next)
-    if (!r.ok) return setFormError(r.error)
+    setLoading(true)
+    try {
+      await resetPassword(form.next)
+    } catch (err) {
+      setLoading(false)
+      return setFormError(err instanceof Error && err.message ? err.message : 'Não foi possível alterar a senha.')
+    }
+    setLoading(false)
     toast({ title: 'Senha alterada', tone: 'success' })
     navigate('/conta/editar')
   }
@@ -50,7 +57,7 @@ export default function EditProfilePassword() {
               </Field>
             </Stack>
           </Card>
-          <Button type="submit" $size="lg" $block>Salvar alterações</Button>
+          <Button type="submit" $size="lg" $block disabled={loading}>{loading ? 'Salvando...' : 'Salvar alterações'}</Button>
         </Stack>
       </form>
     </NarrowContainer>

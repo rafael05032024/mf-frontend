@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { loginRequest, setToken } from '../api'
+import { ApiError, loginRequest, setToken } from '../api'
 import { isEmail, normalizeHandle } from '../utils/format'
 import { useApp } from './AppContext'
 
@@ -25,7 +25,12 @@ export function useSignIn() {
       let cover: string | undefined
       try {
         ({ level, profile, name, avatar, cover } = await loginRequest(id, password))
-      } catch {
+      } catch (err) {
+        // Senha incorreta numa conta que existe na API: não pode cair na base local
+        if (err instanceof ApiError && err.status === 401 && /senha/i.test(err.message)) {
+          setToken(null)
+          return { ok: false, error: err.message }
+        }
         // API recusou ou indisponível: tenta a base local (ex.: contas de demonstração)
         setToken(null)
         return login(id, password)

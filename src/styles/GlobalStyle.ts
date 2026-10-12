@@ -3,6 +3,10 @@ import { createGlobalStyle } from 'styled-components'
 export const GlobalStyle = createGlobalStyle`
   *, *::before, *::after { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; --ui-zoom: 1; }
+  /* Notebooks (ex.: 1366x768): interface com a proporção de 125% */
+  @media (min-width: 1280px) and (max-width: 1599px) {
+    html { zoom: 1.25; --ui-zoom: 1.25; }
+  }
   /* Telas grandes (ex.: 1920x1080): interface com a proporção de 150% */
   @media (min-width: 1600px) {
     html { zoom: 1.5; --ui-zoom: 1.5; }
