@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Mail } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import styled from 'styled-components'
 import { Field } from '../components/Field'
 import { InputGroup } from '../components/InputGroup'
 import { PasswordInput } from '../components/PasswordInput'
@@ -9,16 +8,6 @@ import { useToast } from '../components/Toast'
 import { Button, Input, Muted, Stack, Title } from '../components/ui'
 import { useSignIn } from '../store/useSignIn'
 import { AuthShell } from './AuthShell'
-
-const Demo = styled.div`
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.grayText};
-  background: ${({ theme }) => theme.colors.light};
-  border-radius: ${({ theme }) => theme.radius.md};
-  padding: 12px 14px;
-  line-height: 1.6;
-  code { color: ${({ theme }) => theme.colors.dark}; font-weight: 600; }
-`
 
 export default function Login() {
   const signIn = useSignIn()
@@ -63,11 +52,6 @@ export default function Login() {
           <Muted style={{ textAlign: 'center' }}>
             Ainda não tem conta? <Link to="/cadastro"><b>Cadastre-se</b></Link>
           </Muted>
-          <Demo>
-            Contas de demonstração (senha <code>123456</code>):<br />
-            Usuário: <code>demo@myfoot.com</code><br />
-            Criadora verificada: <code>criadora@myfoot.com</code>
-          </Demo>
         </Stack>
       </form>
     </AuthShell>

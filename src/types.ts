@@ -94,6 +94,8 @@ export interface User {
   createdAt: string
   balanceFt: number
   creatorStatus: CreatorStatus
+  /** Id numérico do usuário em /accounts/me, usado para inscrição no WebSocket de eventos */
+  apiId?: number
   /** Nível da conta em /accounts/me: 1 comum, 2 publicador sem documentos verificados, acima disso verificado */
   level?: number
   paused?: boolean

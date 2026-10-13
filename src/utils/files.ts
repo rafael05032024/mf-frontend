@@ -1,3 +1,29 @@
+/**
+ * Recorta/redimensiona uma região da imagem em um canvas. Reduz em etapas de no máximo 50%
+ * com suavização alta — um único drawImage com redução grande serrilha e borra a imagem.
+ */
+export function drawScaled(src: CanvasImageSource, sx: number, sy: number, sw: number, sh: number, dw: number, dh: number): HTMLCanvasElement {
+  let cur: CanvasImageSource = src
+  let cx = sx, cy = sy, cw = sw, ch = sh
+  while (cw / 2 > dw && ch / 2 > dh) {
+    const step = document.createElement('canvas')
+    step.width = Math.round(cw / 2)
+    step.height = Math.round(ch / 2)
+    const ctx = step.getContext('2d')!
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(cur, cx, cy, cw, ch, 0, 0, step.width, step.height)
+    cur = step
+    cx = 0; cy = 0; cw = step.width; ch = step.height
+  }
+  const out = document.createElement('canvas')
+  out.width = dw
+  out.height = dh
+  const ctx = out.getContext('2d')!
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(cur, cx, cy, cw, ch, 0, 0, dw, dh)
+  return out
+}
+
 /** Lê uma imagem e devolve um dataURL JPEG redimensionado (evita estourar o localStorage). */
 export function readImage(file: File, maxSize = 1080, quality = 0.82): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -5,10 +31,7 @@ export function readImage(file: File, maxSize = 1080, quality = 0.82): Promise<s
     const img = new Image()
     img.onload = () => {
       const scale = Math.min(1, maxSize / Math.max(img.width, img.height))
-      const canvas = document.createElement('canvas')
-      canvas.width = Math.round(img.width * scale)
-      canvas.height = Math.round(img.height * scale)
-      canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+      const canvas = drawScaled(img, 0, 0, img.width, img.height, Math.round(img.width * scale), Math.round(img.height * scale))
       URL.revokeObjectURL(url)
       resolve(canvas.toDataURL('image/jpeg', quality))
     }

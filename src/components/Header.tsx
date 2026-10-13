@@ -172,7 +172,7 @@ export function Header() {
             </span>
           </Brand>
           <Button $size="sm" onClick={() => navigate('/cadastro')}>
-            Assinar Plataforma
+            Fazer meu cadastro
           </Button>
         </Inner>
       </Bar>

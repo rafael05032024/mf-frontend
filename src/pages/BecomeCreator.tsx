@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AtSign, Calendar, Clock, CreditCard, ExternalLink, Globe, User } from 'lucide-react'
+import { AtSign, Calendar, Clock, Coins, CreditCard, ExternalLink, Globe, User } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -15,7 +15,7 @@ import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 import { Button, Card, Input, Muted, NarrowContainer, Stack } from '../components/ui'
 import { useApp, useAuthedUser } from '../store/AppContext'
-import { ageFrom, brlToFt, formatFt, HANDLE_RE, isValidCPF, maskCPF, normalizeHandle } from '../utils/format'
+import { ageFrom, brlToFt, formatNumber, HANDLE_RE, isValidCPF, maskCPF, normalizeHandle } from '../utils/format'
 
 type StepId = 'personal' | 'profile' | 'cover' | 'social' | 'price' | 'verify'
 
@@ -72,14 +72,47 @@ const QRBox = styled.div`
 
 const PriceSummary = styled.div`
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
+  gap: 14px;
+  padding: 16px;
   border-radius: ${({ theme }) => theme.radius.md};
-  background: ${({ theme }) => theme.colors.primarySoft};
-  color: ${({ theme }) => theme.colors.primaryText};
-  font-weight: 600;
-  strong { font-size: 18px; font-weight: 800; }
+  border: 1px solid ${({ theme }) => theme.colors.primary}33;
+  background: linear-gradient(135deg, ${({ theme }) => theme.colors.primarySoft} 0%, ${({ theme }) => theme.colors.white} 100%);
+
+  .icon {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: ${({ theme }) => theme.radius.pill};
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.white};
+    box-shadow: 0 4px 12px ${({ theme }) => theme.colors.primary}40;
+  }
+  .label {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 14px;
+    font-weight: 600;
+    color: ${({ theme }) => theme.colors.dark};
+    small { font-size: 12px; font-weight: 500; color: ${({ theme }) => theme.colors.grayText}; }
+  }
+  .value {
+    flex-shrink: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    font-family: ${({ theme }) => theme.fontDisplay};
+    color: ${({ theme }) => theme.colors.primaryText};
+    white-space: nowrap;
+    strong { font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: -0.5px; }
+    span { font-size: 13px; font-weight: 600; color: ${({ theme }) => theme.colors.grayText}; }
+  }
+  .empty { font-size: 22px; font-weight: 700; color: ${({ theme }) => theme.colors.gray}; }
 `
 
 type Form = {
@@ -308,7 +341,7 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
 
           {stepId === 'profile' && (
             <>
-              <ImageUpload label="Foto de perfil" shape="avatar" size={180} center crop value={form.avatar} onChange={v => set('avatar', v)} error={errors.avatar} hint="Enviar" />
+              <ImageUpload hideLabel label="Foto de perfil" shape="avatar" size={180} center crop value={form.avatar} onChange={v => set('avatar', v)} error={errors.avatar} hint="Enviar" />
               <Field label="Nome do perfil" error={errors.displayName} hint="Nome exibido para os fãs">
                 <InputGroup leftIcon={<User size={18} />}>
                   <Input value={form.displayName} onChange={e => set('displayName', e.target.value)} />
@@ -355,8 +388,19 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
             <>
               <AmountPicker label="Valor mensal da assinatura" value={form.price} onChange={v => set('price', v)} error={errors.price} presets={[15, 20, 30, 50, 100, 150]} whole />
               <PriceSummary>
-                <span>Seus assinantes pagarão</span>
-                <strong>{priceValid ? `${formatFt(brlToFt(parseBRL(form.price)))}/mês` : '—'}</strong>
+                <span className="icon" aria-hidden><Coins size={22} /></span>
+                <span className="label">
+                  Seus assinantes pagarão
+                  <small>Por mês de acesso ao seu conteúdo</small>
+                </span>
+                {priceValid ? (
+                  <span className="value">
+                    <strong>{formatNumber(brlToFt(parseBRL(form.price)))}</strong>
+                    <span>ft/mês</span>
+                  </span>
+                ) : (
+                  <span className="empty">—</span>
+                )}
               </PriceSummary>
             </>
           )}

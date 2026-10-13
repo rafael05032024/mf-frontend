@@ -25,19 +25,24 @@ export function subscribeEvents(listener: Listener): () => void {
   return () => { listeners.delete(listener) }
 }
 
-// Abre o WebSocket de eventos do perfil (/event/{profile}) e reconecta com
-// backoff enquanto não for fechado. O token segue no cookie `Token`.
-// Retorna a função que encerra a conexão.
-export function connectEvents(profile: string, onEvent: (data: unknown) => void): () => void {
+// Abre o WebSocket de eventos do usuário (/event/{id}), identificado pelo id
+// retornado em /accounts/me, e reconecta com backoff enquanto não for fechado.
+// O token segue no cookie `Token`. Retorna a função que encerra a conexão.
+export function connectEvents(userId: number, onEvent: (data: unknown) => void): () => void {
+  // Só considera a conexão estável (e zera o backoff) depois de ficar aberta por esse tempo;
+  // evita um loop de reconexão a cada ~1s quando o servidor aceita e fecha a conexão em seguida.
+  const STABLE_MS = 10_000
   let ws: WebSocket | null = null
   let timer: number | undefined
   let attempt = 0
+  let openedAt = 0
   let closed = false
 
   const open = () => {
-    ws = new WebSocket(wsUrl(`/event/${encodeURIComponent(profile)}`))
+    openedAt = 0
+    ws = new WebSocket(wsUrl(`/event/${userId}`))
     ws.onopen = () => {
-      attempt = 0
+      openedAt = Date.now()
     }
     ws.onmessage = e => {
       let data: unknown = e.data
@@ -51,7 +56,8 @@ export function connectEvents(profile: string, onEvent: (data: unknown) => void)
     }
     ws.onclose = () => {
       if (closed) return
-      timer = window.setTimeout(open, Math.min(30_000, 1000 * 2 ** attempt++))
+      attempt = openedAt && Date.now() - openedAt > STABLE_MS ? 0 : attempt + 1
+      timer = window.setTimeout(open, Math.min(30_000, 1000 * 2 ** attempt))
     }
   }
   open()

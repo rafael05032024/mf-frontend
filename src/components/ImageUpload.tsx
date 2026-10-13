@@ -72,13 +72,19 @@ export function ImageUpload({ label, value, onChange, shape = 'doc', hint, error
     setReadError('')
     setLoading(true)
     try {
-      if (crop) setCropSrc(await readImage(file, 1600, 0.92))
+      // recorte usa o arquivo original: evita uma recompressão JPEG antes do corte final
+      if (crop) setCropSrc(URL.createObjectURL(file))
       else onChange(await readImage(file, maxSize ?? (shape === 'avatar' ? 400 : 1200)))
     } catch {
       setReadError('Não foi possível ler a imagem.')
     } finally {
       setLoading(false)
     }
+  }
+
+  const closeCrop = () => {
+    URL.revokeObjectURL(cropSrc)
+    setCropSrc('')
   }
 
   const err = error || readError
@@ -115,10 +121,10 @@ export function ImageUpload({ label, value, onChange, shape = 'doc', hint, error
       {cropSrc && (
         <ImageCropper
           src={cropSrc}
-          outputSize={maxSize ?? (shape === 'avatar' ? 400 : 1200)}
+          outputSize={maxSize ?? (shape === 'avatar' ? 800 : 2400)}
           aspect={shape === 'avatar' ? 1 : shape === 'cover' ? 3 : 4 / 3}
-          onCancel={() => setCropSrc('')}
-          onConfirm={v => { onChange(v); setCropSrc('') }}
+          onCancel={closeCrop}
+          onConfirm={v => { onChange(v); closeCrop() }}
         />
       )}
       {err && <FieldError id={`${id}-err`} role="alert">{err}</FieldError>}

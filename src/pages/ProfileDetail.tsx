@@ -30,9 +30,11 @@ const Hero = styled.section`
 
 const Cover = styled.div`
   position: relative;
-  height: 150px;
+  height: 190px;
   background: ${({ theme }) => theme.colors.primarySoft};
-  ${mq.md} { height: 260px; }
+  ${mq.sm} { height: 240px; }
+  /* no desktop segue a proporção do recorte (3:1), sem cortar a imagem */
+  ${mq.md} { height: auto; aspect-ratio: 3 / 1; }
   > img { width: 100%; height: 100%; object-fit: cover; }
 `
 
@@ -140,10 +142,25 @@ const Bio = styled.p`
   width: 100%;
 `
 
-const Actions = styled.div`
+const OwnerBar = styled.div`
   display: grid;
-  gap: 10px;
-  ${mq.sm} { display: flex; }
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  ${mq.sm} { display: flex; gap: 10px; }
+
+  button {
+    min-height: 42px;
+    padding: 0 16px;
+    font-size: 14px;
+    gap: 6px;
+  }
+  /* no mobile mostra o rótulo curto; a partir de sm, o completo */
+  .full { display: none; }
+  ${mq.sm} {
+    .short { display: none; }
+    .full { display: inline; }
+    button { padding: 0 20px; }
+  }
 `
 
 const Subscribed = styled.div`
@@ -365,14 +382,16 @@ export default function ProfileDetail() {
 
           <ActionArea>
           {isOwner ? (
-            <Actions>
-              <Button $size="lg" onClick={() => navigate('/postar')}>
-                <Plus size={20} strokeWidth={2.6} /> Postar conteúdo
+            <OwnerBar>
+              <Button onClick={() => navigate('/postar')}>
+                <Plus size={18} strokeWidth={2.6} aria-hidden />
+                <span className="short">Postar</span>
+                <span className="full">Postar conteúdo</span>
               </Button>
-              <Button $size="lg" $variant="outline" onClick={() => navigate('/conta/editar')}>
-                <Settings size={18} /> Configurações do perfil
+              <Button $variant="secondary" onClick={() => navigate('/conta/editar')}>
+                <Settings size={17} aria-hidden /> Editar perfil
               </Button>
-            </Actions>
+            </OwnerBar>
           ) : isSigned ? (
             <Subscribed role="status">
               <CalendarCheck size={16} /> Assinante{subscription && <> · acesso até {formatDate(subscription.expiresAt)}</>}

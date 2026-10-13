@@ -64,7 +64,7 @@ export default function Post() {
   const [caption, setCaption] = useState(editing?.caption ?? '')
   const [paid, setPaid] = useState(editing?.paid ?? true)
   const [loading, setLoading] = useState(false)
-  const [errors, setErrors] = useState<{ media?: string; caption?: string; form?: string }>({})
+  const [errors, setErrors] = useState<{ media?: string; form?: string }>({})
   const [posting, setPosting] = useState(false)
 
   const pick = async (file?: File) => {
@@ -91,7 +91,6 @@ export default function Post() {
   const submit = async () => {
     const er: typeof errors = {}
     if (!media || (!file && !editing)) er.media = 'Selecione uma mídia para postar.'
-    if (caption.trim().length === 0) er.caption = 'Escreva uma legenda.'
     setErrors(er)
     if (Object.keys(er).length) return
     setPosting(true)
@@ -146,7 +145,7 @@ export default function Post() {
               {errors.media && <FieldError role="alert">{errors.media}</FieldError>}
             </div>
 
-            <Field label="Legenda" error={errors.caption} hint={`${caption.length}/500`}>
+            <Field label="Legenda (opcional)" hint={`${caption.length}/500`}>
               <EmojiTextarea value={caption} maxLength={500} onChange={setCaption} placeholder="Escreva algo sobre esta mídia…" />
             </Field>
           </Stack>

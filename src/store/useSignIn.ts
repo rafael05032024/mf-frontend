@@ -6,9 +6,9 @@ import { useApp } from './AppContext'
 type Result = { ok: true } | { ok: false; error: string }
 
 // Login via API (gera e salva o token JWT) + sessão local do app.
-// Identificadores que não são e-mail (@perfil) e as contas de demonstração usam só a base local.
+// Identificadores que não são e-mail (@perfil) usam só a base local.
 export function useSignIn() {
-  const { login, register, handleAvailable, applyLevel, applyProfile } = useApp()
+  const { login, adoptSession, register, handleAvailable, applyLevel, applyProfile } = useApp()
 
   return useCallback(
     async (identifier: string, password: string): Promise<Result> => {
@@ -19,27 +19,29 @@ export function useSignIn() {
       }
 
       let level = 1
+      let apiId: number | undefined
       let profile: string | undefined
       let name: string | undefined
       let avatar: string | undefined
       let cover: string | undefined
       try {
-        ({ level, profile, name, avatar, cover } = await loginRequest(id, password))
+        ({ level, apiId, profile, name, avatar, cover } = await loginRequest(id, password))
       } catch (err) {
         // Senha incorreta numa conta que existe na API: não pode cair na base local
         if (err instanceof ApiError && err.status === 401 && /senha/i.test(err.message)) {
           setToken(null)
           return { ok: false, error: err.message }
         }
-        // API recusou ou indisponível: tenta a base local (ex.: contas de demonstração)
+        // API recusou ou indisponível: tenta a base local
         setToken(null)
         return login(id, password)
       }
 
-      const local = login(id, password)
+      // a API autenticou: se já há conta local com este e-mail (senha antiga/divergente), ela é reaproveitada
+      const local = login(id, password).ok ? { ok: true as const } : adoptSession(id, password)
       if (local.ok) {
         applyLevel(id, level)
-        if (profile) applyProfile(id, profile, { name, avatar, cover })
+        if (profile) applyProfile(id, profile, { name, avatar, cover, apiId })
         return local
       }
 
@@ -52,10 +54,10 @@ export function useSignIn() {
       const created = register({ name: name ?? id.split('@')[0], email: id, handle, password })
       if (created.ok) {
         applyLevel(id, level)
-        if (profile) applyProfile(id, profile, { name, avatar, cover })
+        if (profile) applyProfile(id, profile, { name, avatar, cover, apiId })
       }
       return created
     },
-    [login, register, handleAvailable, applyLevel, applyProfile],
+    [login, adoptSession, register, handleAvailable, applyLevel, applyProfile],
   )
 }

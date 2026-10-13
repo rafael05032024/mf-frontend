@@ -63,7 +63,7 @@ export async function login(email: string, password: string) {
   setToken(token)
   // perfil (@), nome e nível (level) vêm de /accounts/me; falha aqui não deve impedir o login
   const me = await getMe().catch(() => undefined)
-  return { token, level: me?.level ?? 1, profile: me?.profile.replace(/^@/, ''), name: me?.name, avatar: mediaUrl(me?.thumb), cover: mediaUrl(me?.cover_photo) }
+  return { token, apiId: me?.id, level: me?.level ?? 1, profile: me?.profile.replace(/^@/, ''), name: me?.name, avatar: mediaUrl(me?.thumb), cover: mediaUrl(me?.cover_photo) }
 }
 
 export interface UpdateMePayload {

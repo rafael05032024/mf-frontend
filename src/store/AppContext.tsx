@@ -3,7 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { mockProfiles } from '../data/mock'
 import type { AppNotification, CreatorInfo, Media, Profile, User } from '../types'
 import { addDays, brlToFt, formatBRL, formatFt, HANDLE_RE, normalizeHandle, uid } from '../utils/format'
-import { buildStats, seedAccounts } from './seed'
+import { buildStats } from './seed'
 import { load, save } from './storage'
 
 const ACCOUNTS_KEY = 'myfoot:accounts'
@@ -39,6 +39,8 @@ interface AppState {
   getProfile: (handle: string) => Profile | undefined
   isSubscribed: (profileId: string) => boolean
   login: (identifier: string, password: string) => Result
+  /** Abre a sessão local de uma conta já autenticada pela API, alinhando a senha local à da API */
+  adoptSession: (email: string, password: string) => Result
   register: (input: RegisterInput) => Result
   logout: () => void
   updateProfile: (patch: Partial<Pick<User, 'name' | 'handle'>> & Partial<Pick<CreatorInfo, 'bio' | 'location' | 'instagram' | 'tiktok' | 'avatar' | 'cover' | 'priceBRL'>>) => Result
@@ -59,7 +61,7 @@ interface AppState {
   /** Aplica o `level` de /accounts/me: maior que 1 exibe a plataforma na visão de publicador */
   applyLevel: (email: string, level: number) => void
   /** Sincroniza o @ da conta local com o perfil retornado pela API no login */
-  applyProfile: (email: string, profile: string, extra?: { name?: string; avatar?: string; cover?: string }) => void
+  applyProfile: (email: string, profile: string, extra?: { name?: string; avatar?: string; cover?: string; apiId?: number }) => void
 }
 
 const AppContext = createContext<AppState | null>(null)
@@ -82,7 +84,7 @@ export function userToProfile(u: User): Profile | undefined {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [accounts, setAccounts] = useState<User[]>(() => load<User[] | null>(ACCOUNTS_KEY, null) ?? seedAccounts())
+  const [accounts, setAccounts] = useState<User[]>(() => (load<User[] | null>(ACCOUNTS_KEY, null) ?? []).filter(a => a.id !== 'u-demo' && a.id !== 'u-creator'))
   const [sessionId, setSessionId] = useState<string | null>(() => load<string | null>(SESSION_KEY, null))
 
   useEffect(() => {
@@ -93,13 +95,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [sessionId])
 
   const user = accounts.find(a => a.id === sessionId) ?? null
-  const eventProfile = user && getToken() ? user.handle : null
+  const eventUserId = user && getToken() ? user.apiId : null
 
-  // WebSocket de eventos do perfil, aberto enquanto houver sessão autenticada na API
+  // WebSocket de eventos do usuário, aberto enquanto houver sessão autenticada na API
   const [remoteNotifications, setRemoteNotifications] = useState<AppNotification[]>([])
 
   useEffect(() => {
-    if (!eventProfile) {
+    if (!eventUserId) {
       setRemoteNotifications([])
       return
     }
@@ -114,7 +116,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         })
         .catch(() => {})
     refresh() // login / sessão restaurada
-    const disconnect = connectEvents(eventProfile, data => {
+    const disconnect = connectEvents(eventUserId, data => {
       console.debug('[event]', data)
       const name = eventName(data)
       if (name && NOTIFY_EVENTS.has(name)) refresh()
@@ -123,7 +125,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       active = false
       disconnect()
     }
-  }, [eventProfile])
+  }, [eventUserId])
 
   const notifications = useMemo(
     () =>
@@ -169,6 +171,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return { ok: true }
   }
 
+  const adoptSession: AppState['adoptSession'] = (email, password) => {
+    const id = email.trim().toLowerCase()
+    const acc = accounts.find(a => a.email.toLowerCase() === id)
+    if (!acc) return { ok: false, error: 'Conta local não encontrada.' }
+    setAccounts(prev => prev.map(a => (a.id === acc.id ? { ...a, password } : a)))
+    setSessionId(acc.id)
+    return { ok: true }
+  }
+
   const register: AppState['register'] = input => {
     const email = input.email.trim().toLowerCase()
     const handle = normalizeHandle(input.handle)
@@ -203,7 +214,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       prev.map(a => {
         if (a.email.toLowerCase() !== id) return a
         const creator = a.creator && extra ? { ...a.creator, avatar: extra.avatar ?? '', cover: extra.cover ?? a.creator.cover } : a.creator
-        return { ...a, handle, name: extra?.name || a.name, creator }
+        return { ...a, handle, name: extra?.name || a.name, apiId: extra?.apiId ?? a.apiId, creator }
       }),
     )
   }
@@ -412,6 +423,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     logout,
     updateProfile,
     changePassword,
+    adoptSession,
     setPaused,
     deleteAccount,
     subscribe,

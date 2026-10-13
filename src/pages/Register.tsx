@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { AtSign, CheckCircle2, Mail, User } from 'lucide-react'
 import styled from 'styled-components'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { createAccount, loginRequest, sendVerificationCode } from '../api'
+import { createAccount, sendVerificationCode } from '../api'
 import { Modal } from '../components/Modal'
 import { CodeInput } from '../components/CodeInput'
 import { Field } from '../components/Field'
@@ -13,6 +13,7 @@ import { isPasswordValid, PASSWORD_ERROR } from '../utils/password'
 import { useToast } from '../components/Toast'
 import { Alert, Button, Input, Muted, Stack, Title } from '../components/ui'
 import { useApp } from '../store/AppContext'
+import { useSignIn } from '../store/useSignIn'
 import { HANDLE_RE, isEmail, normalizeHandle } from '../utils/format'
 import { AuthShell } from './AuthShell'
 
@@ -31,7 +32,8 @@ const Countdown = styled.div`
 type Errors = Partial<Record<'name' | 'email' | 'handle' | 'password', string>>
 
 export default function Register() {
-  const { register, login, handleAvailable } = useApp()
+  const { handleAvailable } = useApp()
+  const signIn = useSignIn()
   const navigate = useNavigate()
   const location = useLocation()
   const toast = useToast()
@@ -62,7 +64,7 @@ export default function Register() {
 
   const validate = (): Errors => {
     const er: Errors = {}
-    if (form.name.trim().length < 2) er.name = 'Informe seu nome.'
+    if (form.name.trim().length < 2) er.name = 'Informe o nome do perfil.'
     if (!isEmail(form.email)) er.email = 'Informe um e-mail válido.'
     if (!HANDLE_RE.test(form.handle)) er.handle = 'Use 3 a 20 caracteres: letras minúsculas, números, "." ou "_".'
     else if (!handleAvailable(form.handle)) er.handle = 'Este perfil já está em uso.'
@@ -115,17 +117,21 @@ export default function Register() {
     setLoading(true)
     try {
       await createAccount({ name: form.name.trim(), email: form.email.trim(), profile: form.handle, password: form.password, code })
-      await loginRequest(form.email.trim(), form.password)
     } catch (err) {
       setLoading(false)
       return toast({ title: err instanceof Error ? err.message : 'Não foi possível criar a conta.', tone: 'danger' })
+    }
+    // login imediato: gera o token (/api/login + /accounts/me) e abre a sessão local
+    const session = await signIn(form.email.trim(), form.password)
+    if (!session.ok) {
+      setLoading(false)
+      toast({ title: `Conta criada, mas não foi possível entrar: ${session.error}`, tone: 'danger' })
+      return navigate('/login', { replace: true })
     }
     setLoading(false)
     setRedirecting(true)
     const to = (location.state as { from?: string } | null)?.from ?? '/'
     timer.current = window.setTimeout(() => {
-      const r = register(form)
-      if (!r.ok) login(form.email, form.password)
       navigate(to, { replace: true })
     }, 5000)
   }
@@ -168,9 +174,9 @@ export default function Register() {
             <Title>Criar conta</Title>
             <Muted>Leva menos de um minuto.</Muted>
           </div>
-          <Field label="Nome" error={errors.name}>
+          <Field label="Nome do Perfil" error={errors.name}>
             <InputGroup leftIcon={<User size={18} />}>
-              <Input value={form.name} onChange={set('name')} autoComplete="name" placeholder="Como você se chama?" />
+              <Input value={form.name} onChange={set('name')} autoComplete="name" placeholder="Qual vai ser o nome do perfil?" />
             </InputGroup>
           </Field>
           <Field label="E-mail" error={errors.email}>
