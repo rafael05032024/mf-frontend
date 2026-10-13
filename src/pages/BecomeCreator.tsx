@@ -273,7 +273,7 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
       // consulta novamente os dados da conta logada
       const me = await getMe()
       applyLevel(user.email, me.level ?? 1)
-      applyProfile(user.email, me.profile.replace(/^@/, ''), { name: me.name, avatar: mediaUrl(me.thumb), cover: mediaUrl(me.cover_photo) })
+      applyProfile(user.email, me.profile.replace(/^@/, ''), { name: me.name, avatar: mediaUrl(me.thumb), cover: mediaUrl(me.cover_photo), bio: me.description ?? undefined })
       navigate('/', { replace: true, state: { preRegistered: true } })
     } catch (e) {
       skipped.current = false

@@ -54,6 +54,8 @@ export interface Me {
   level?: number
   /** Perfil verificado: define se o selo é exibido */
   verified?: boolean
+  /** Biografia do perfil de criador */
+  description?: string | null
 }
 
 export function getMe() {
@@ -65,7 +67,16 @@ export async function login(email: string, password: string) {
   setToken(token)
   // perfil (@), nome e nível (level) vêm de /accounts/me; falha aqui não deve impedir o login
   const me = await getMe().catch(() => undefined)
-  return { token, apiId: me?.id, level: me?.level ?? 1, profile: me?.profile.replace(/^@/, ''), name: me?.name, avatar: mediaUrl(me?.thumb), cover: mediaUrl(me?.cover_photo) }
+  return {
+    token,
+    apiId: me?.id,
+    level: me?.level ?? 1,
+    profile: me?.profile.replace(/^@/, ''),
+    name: me?.name,
+    avatar: mediaUrl(me?.thumb),
+    cover: mediaUrl(me?.cover_photo),
+    bio: me?.description ?? undefined,
+  }
 }
 
 export interface UpdateMePayload {
@@ -121,4 +132,14 @@ export function preRegisterPartner() {
 export async function createLiveness(): Promise<string> {
   const { verificationUrl } = await api.post<{ id: number; verificationUrl: string }>('/api/liveness')
   return verificationUrl
+}
+
+/** Pausa a conta do usuário logado: o perfil fica oculto até a reativação */
+export function pauseAccount() {
+  return api.patch<void>('/api/accounts/me/pause')
+}
+
+/** Exclui definitivamente a conta do usuário logado */
+export function deleteAccount() {
+  return api.delete<void>('/api/accounts/me')
 }

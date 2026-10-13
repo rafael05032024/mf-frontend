@@ -12,7 +12,7 @@ const Figure = styled.figure`
   max-height: calc(96dvh / var(--ui-zoom, 1));
   margin: 0;
   figcaption { flex: none; padding: 14px 20px 20px; font-size: 15px; background: ${({ theme }) => theme.colors.white}; }
-  p { margin: 6px 0 0; color: ${({ theme }) => theme.colors.grayText}; line-height: 1.5; white-space: pre-line; }
+  p { margin: 0; color: ${({ theme }) => theme.colors.grayText}; line-height: 1.5; white-space: pre-line; }
 `
 
 const Stage = styled.div`
@@ -76,10 +76,8 @@ const FullStage = styled.div`
   }
 `
 
-const Expand = styled(IconButton)`
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
+/** Botão sobreposto à mídia (tela cheia, zoom e as ações do dono da postagem) */
+export const OverlayButton = styled(IconButton)`
   z-index: 2;
   width: 40px;
   height: 40px;
@@ -88,24 +86,39 @@ const Expand = styled(IconButton)`
   &:hover { background: rgba(0, 0, 0, 0.75); }
 `
 
-const FullToggle = styled(Expand)`
+const Expand = styled(OverlayButton)`
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+`
+
+const FullToggle = styled(OverlayButton)`
+  position: absolute;
   top: 10px;
   right: 10px;
-  bottom: auto;
 `
 
 const ZoomToggle = styled(FullToggle)`
   right: 58px;
 `
 
+// ações do dono no canto superior esquerdo, sobre a mídia
+const Actions = styled.div`
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 3;
+`
+
 const ZOOM = 2.5
 
 interface Props {
   media: Media
-  footer?: ReactNode
+  /** Ações do dono da postagem, sobrepostas no canto superior esquerdo */
+  actions?: ReactNode
 }
 
-export function MediaViewer({ media, footer }: Props) {
+export function MediaViewer({ media, actions }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [zoomed, setZoomed] = useState(false)
   const [origin, setOrigin] = useState('50% 50%')
@@ -161,6 +174,7 @@ export function MediaViewer({ media, footer }: Props) {
       <Stage>
         {!expanded && !isVideo && <Backdrop src={media.url} alt="" aria-hidden />}
         {!expanded && renderMedia()}
+        {!expanded && actions && <Actions>{actions}</Actions>}
         {!expanded && (
           <Expand onClick={() => setExpanded(true)} aria-label="Expandir para tela cheia">
             <Maximize2 size={20} />
@@ -185,10 +199,11 @@ export function MediaViewer({ media, footer }: Props) {
           </Full>,
           document.body,
         )}
-      <figcaption>
-        {media.caption && <p>{media.caption}</p>}
-        {footer}
-      </figcaption>
+      {media.caption && (
+        <figcaption>
+          <p>{media.caption}</p>
+        </figcaption>
+      )}
     </Figure>
   )
 }

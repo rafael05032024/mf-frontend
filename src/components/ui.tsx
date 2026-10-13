@@ -63,6 +63,7 @@ export const Button = styled.button<{ $variant?: Variant; $block?: boolean; $siz
         return css`
           background: ${c.danger};
           color: ${c.white};
+          &:hover:not(:disabled) { background: ${c.dangerHover}; }
         `
       case 'ghost':
         return css`

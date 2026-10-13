@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { BadgeDollarSign, Image, KeyRound, ShieldCheck, PauseCircle, Share2, Trash2, UserPen } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { getMe, mediaUrl, uploadPhoto } from '../api'
+import { deleteAccountRequest, getMe, mediaUrl, pauseAccount, uploadPhoto } from '../api'
 import { ActionItem, List } from '../components/ActionList'
 import { Avatar } from '../components/Avatar'
 import { ImageUpload } from '../components/ImageUpload'
@@ -26,11 +26,12 @@ const Confirm = styled(Stack)`
 
 export default function EditProfile() {
   const user = useAuthedUser()
-  const { updateProfile, setPaused, deleteAccount } = useApp()
+  const { updateProfile, logout, deleteAccount } = useApp()
   const toast = useToast()
   const navigate = useNavigate()
   const isCreator = user.creatorStatus === 'verified' && !!user.creator
   const [confirm, setConfirm] = useState<'pause' | 'delete' | null>(null)
+  const [loading, setLoading] = useState(false)
 
   const onAvatar = async (avatar: string) => {
     // a foto precisa ir para a API, senão o perfil público continua exibindo a antiga
@@ -45,16 +46,36 @@ export default function EditProfile() {
     toast({ title: r.ok ? 'Foto de perfil atualizada' : r.error, tone: r.ok ? 'success' : 'info' })
   }
 
-  const close = () => setConfirm(null)
-
-  const onPause = () => {
-    setPaused(!user.paused)
-    toast({ title: user.paused ? 'Conta reativada' : 'Conta pausada', tone: 'success' })
-    close()
+  const close = () => {
+    if (!loading) setConfirm(null)
   }
 
-  const onDelete = () => {
+  // pausar e excluir encerram a sessão: em ambos os casos o usuário volta para o login
+  const onPause = async () => {
+    if (loading) return
+    setLoading(true)
+    try {
+      await pauseAccount()
+    } catch (err) {
+      setLoading(false)
+      return toast({ title: err instanceof Error && err.message ? err.message : 'Não foi possível pausar a conta.', tone: 'danger' })
+    }
+    logout()
+    toast({ title: 'Conta pausada', tone: 'success' })
+    navigate('/login', { replace: true })
+  }
+
+  const onDelete = async () => {
+    if (loading) return
+    setLoading(true)
+    try {
+      await deleteAccountRequest()
+    } catch (err) {
+      setLoading(false)
+      return toast({ title: err instanceof Error && err.message ? err.message : 'Não foi possível excluir a conta.', tone: 'danger' })
+    }
     deleteAccount()
+    toast({ title: 'Conta excluída', tone: 'success' })
     navigate('/login', { replace: true })
   }
 
@@ -88,24 +109,20 @@ export default function EditProfile() {
           <ActionItem
             icon={<PauseCircle size={20} />}
             tone="neutral"
-            title={user.paused ? 'Reativar conta' : 'Pausar conta'}
+            title="Pausar conta"
             onClick={() => setConfirm('pause')}
           />
           <ActionItem icon={<Trash2 size={20} />} tone="danger" title="Excluir conta" onClick={() => setConfirm('delete')} />
         </List>
       </Stack>
 
-      <Modal open={confirm === 'pause'} onClose={close} label={user.paused ? 'Reativar conta' : 'Pausar conta'}>
+      <Modal open={confirm === 'pause'} onClose={close} label="Pausar conta">
         <Confirm>
-          <SectionTitle>{user.paused ? 'Reativar conta?' : 'Pausar conta?'}</SectionTitle>
-          <Muted>
-            {user.paused
-              ? 'Seu perfil voltará a ficar visível para os assinantes.'
-              : 'Seu perfil ficará oculto até você reativar a conta. Você pode voltar quando quiser.'}
-          </Muted>
+          <SectionTitle>Pausar conta?</SectionTitle>
+          <Muted>Seu perfil ficará oculto e sua sessão será encerrada. Faça login novamente para reativar a conta.</Muted>
           <Row $gap={8}>
-            <Button $variant="outline" $block onClick={close}>Cancelar</Button>
-            <Button $block onClick={onPause}>{user.paused ? 'Reativar' : 'Pausar'}</Button>
+            <Button $variant="outline" $block onClick={close} disabled={loading}>Cancelar</Button>
+            <Button $block onClick={onPause} disabled={loading}>{loading ? 'Pausando...' : 'Pausar'}</Button>
           </Row>
         </Confirm>
       </Modal>
@@ -115,8 +132,8 @@ export default function EditProfile() {
           <SectionTitle>Excluir conta?</SectionTitle>
           <Muted>Esta ação é permanente: seu perfil, publicações e saldo serão removidos e não poderão ser recuperados.</Muted>
           <Row $gap={8}>
-            <Button $variant="outline" $block onClick={close}>Cancelar</Button>
-            <Button $variant="danger" $block onClick={onDelete}>Excluir</Button>
+            <Button $variant="outline" $block onClick={close} disabled={loading}>Cancelar</Button>
+            <Button $variant="danger" $block onClick={onDelete} disabled={loading}>{loading ? 'Excluindo...' : 'Excluir'}</Button>
           </Row>
         </Confirm>
       </Modal>

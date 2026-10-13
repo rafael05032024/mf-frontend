@@ -17,6 +17,7 @@ export const theme = {
     success: '#12805C',
     successSoft: '#E7F6F0',
     danger: '#C62828',
+    dangerHover: '#A81F1F',
     dangerSoft: '#FDECEC',
     warning: '#8A5A00',
     warningSoft: '#FFF6E0',

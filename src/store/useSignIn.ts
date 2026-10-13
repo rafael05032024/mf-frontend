@@ -24,8 +24,9 @@ export function useSignIn() {
       let name: string | undefined
       let avatar: string | undefined
       let cover: string | undefined
+      let bio: string | undefined
       try {
-        ({ level, apiId, profile, name, avatar, cover } = await loginRequest(id, password))
+        ({ level, apiId, profile, name, avatar, cover, bio } = await loginRequest(id, password))
       } catch (err) {
         // Senha incorreta numa conta que existe na API: não pode cair na base local
         if (err instanceof ApiError && err.status === 401 && /senha/i.test(err.message)) {
@@ -41,7 +42,7 @@ export function useSignIn() {
       const local = login(id, password).ok ? { ok: true as const } : adoptSession(id, password)
       if (local.ok) {
         applyLevel(id, level)
-        if (profile) applyProfile(id, profile, { name, avatar, cover, apiId })
+        if (profile) applyProfile(id, profile, { name, avatar, cover, apiId, bio })
         return local
       }
 
@@ -54,7 +55,7 @@ export function useSignIn() {
       const created = register({ name: name ?? id.split('@')[0], email: id, handle, password })
       if (created.ok) {
         applyLevel(id, level)
-        if (profile) applyProfile(id, profile, { name, avatar, cover, apiId })
+        if (profile) applyProfile(id, profile, { name, avatar, cover, apiId, bio })
       }
       return created
     },

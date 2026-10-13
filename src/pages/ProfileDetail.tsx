@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CalendarCheck, Image as ImageIcon, Lock, Pencil, Plus, Settings, Trash2, Video } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowLeft, CalendarCheck, Image as ImageIcon, Lock, MoreVertical, Pencil, Plus, Settings, Trash2, Video } from 'lucide-react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import styled from 'styled-components'
 import { deletePost, getProfile, subscribeToProfile, ApiError } from '../api'
@@ -8,10 +8,10 @@ import { Avatar } from '../components/Avatar'
 import { InstagramIcon, TikTokIcon, VerifiedBadge } from '../components/icons'
 import { MediaGrid } from '../components/MediaGrid'
 import { LoginModal } from '../components/LoginModal'
-import { MediaViewer } from '../components/MediaViewer'
+import { MediaViewer, OverlayButton } from '../components/MediaViewer'
 import { Modal } from '../components/Modal'
 import { SubscribeModal, SuccessModal } from '../components/SubscribeModals'
-import { Alert, Button, Container, Muted, Title } from '../components/ui'
+import { Alert, Button, Container, Muted, Row, SectionTitle, Stack, Title } from '../components/ui'
 import { useApp } from '../store/AppContext'
 import { mq } from '../styles/theme'
 import type { Media, MediaType, Profile } from '../types'
@@ -202,6 +202,47 @@ const Empty = styled.div`
   svg { margin: 0 auto 8px; color: ${({ theme }) => theme.colors.gray}; }
 `
 
+// menu de ações do dono da postagem (3 pontinhos sobre a mídia)
+const MenuWrap = styled.div`
+  position: relative;
+`
+
+const MenuList = styled.div`
+  position: absolute;
+  top: 46px;
+  left: 0;
+  z-index: 3;
+  display: grid;
+  gap: 2px;
+  min-width: 190px;
+  padding: 6px;
+  border-radius: ${({ theme }) => theme.radius.md};
+  background: ${({ theme }) => theme.colors.white};
+  box-shadow: ${({ theme }) => theme.shadow.lg};
+`
+
+const MenuItem = styled.button<{ $danger?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: ${({ theme }) => theme.radius.sm};
+  background: transparent;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: left;
+  color: ${({ $danger, theme }) => ($danger ? theme.colors.danger : theme.colors.dark)};
+  transition: background-color 0.18s ease;
+  &:hover { background: ${({ $danger, theme }) => ($danger ? theme.colors.dangerSoft : theme.colors.light)}; }
+  svg { flex-shrink: 0; }
+`
+
+const Confirm = styled(Stack)`
+  padding: 32px 24px 24px;
+`
+
 type Filter = 'all' | MediaType
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'TODOS' },
@@ -209,41 +250,94 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'video', label: 'VÍDEOS' },
 ]
 
-function OwnerActions({ media, onDeleted }: { media: Media; onDeleted: () => void }) {
-  const navigate = useNavigate()
-  const [confirming, setConfirming] = useState(false)
+function OwnerMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    // capture + stop: o Escape fecha só o menu, sem fechar o modal da mídia por baixo
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.stopImmediatePropagation()
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    window.addEventListener('keydown', onKey, true)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      window.removeEventListener('keydown', onKey, true)
+    }
+  }, [open])
+
+  const pick = (action: () => void) => () => {
+    setOpen(false)
+    action()
+  }
+
+  return (
+    <MenuWrap ref={wrapRef}>
+      <OverlayButton onClick={() => setOpen(o => !o)} aria-label="Ações da postagem" aria-haspopup="menu" aria-expanded={open}>
+        <MoreVertical size={20} />
+      </OverlayButton>
+      {open && (
+        <MenuList role="menu">
+          <MenuItem role="menuitem" onClick={pick(onEdit)}>
+            <Pencil size={17} aria-hidden /> Editar postagem
+          </MenuItem>
+          <MenuItem role="menuitem" $danger onClick={pick(onDelete)}>
+            <Trash2 size={17} aria-hidden /> Excluir postagem
+          </MenuItem>
+        </MenuList>
+      )}
+    </MenuWrap>
+  )
+}
+
+function DeletePostModal({ media, onClose, onDeleted }: { media: Media; onClose: () => void; onDeleted: () => void }) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+
+  // capture + stop: o Escape cancela só a confirmação, sem fechar o visualizador por baixo
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      e.stopImmediatePropagation()
+      if (!busy) onClose()
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [busy, onClose])
 
   const remove = async () => {
     setBusy(true)
     setError('')
     try {
       await deletePost(media.id)
-      onDeleted()
+      onDeleted() // desmonta este modal: não há estado para restaurar
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível concluir a ação.')
-    } finally {
       setBusy(false)
     }
   }
 
   return (
-    <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>
-      {error && <Alert $tone="danger" role="alert">{error}</Alert>}
-      {confirming ? (
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span>Excluir esta postagem?</span>
-          <Button $size="sm" onClick={remove} disabled={busy}>Excluir</Button>
-          <Button $size="sm" $variant="outline" onClick={() => setConfirming(false)} disabled={busy}>Cancelar</Button>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button $size="sm" $variant="outline" onClick={() => navigate('/postar', { state: { media } })}><Pencil size={16} /> Editar</Button>
-          <Button $size="sm" $variant="outline" onClick={() => setConfirming(true)}><Trash2 size={16} /> Excluir</Button>
-        </div>
-      )}
-    </div>
+    <Modal open onClose={busy ? () => {} : onClose} label="Excluir postagem" hideClose={busy} width={400}>
+      <Confirm>
+        <SectionTitle>Excluir esta postagem?</SectionTitle>
+        <Muted>
+          {media.type === 'video' ? 'O vídeo será removido' : 'A foto será removida'} do seu perfil permanentemente. Esta ação não pode ser desfeita.
+        </Muted>
+        {error && <Alert $tone="danger" role="alert">{error}</Alert>}
+        <Row $gap={8}>
+          <Button $variant="outline" $block onClick={onClose} disabled={busy}>Cancelar</Button>
+          <Button $variant="danger" $block onClick={remove} disabled={busy}>{busy ? 'Excluindo...' : 'Excluir'}</Button>
+        </Row>
+      </Confirm>
+    </Modal>
   )
 }
 
@@ -263,6 +357,7 @@ export default function ProfileDetail() {
   const [submitting, setSubmitting] = useState(false)
   const [subscribeError, setSubscribeError] = useState('')
   const [viewing, setViewing] = useState<Media | null>(null)
+  const [deleting, setDeleting] = useState<Media | null>(null)
   const closeSuccess = useCallback(() => setSuccessOpen(false), [])
 
   useEffect(() => {
@@ -417,9 +512,15 @@ export default function ProfileDetail() {
         {media.length === 0 ? (
           <Empty>
             <ImageIcon size={32} aria-hidden />
-            <p>Nenhuma mídia por aqui ainda.</p>
-            {isOwner && (
-              <Link to="/postar" style={{ fontWeight: 700 }}>Fazer minha primeira postagem</Link>
+            {filter === 'all' || !profile || profile.media.length === 0 ? (
+              <>
+                <p>Nenhuma mídia por aqui ainda.</p>
+                {isOwner && (
+                  <Link to="/postar" style={{ fontWeight: 700 }}>Fazer minha primeira postagem</Link>
+                )}
+              </>
+            ) : (
+              <p>Nenhum{filter === 'video' ? ' vídeo' : 'a foto'} por aqui ainda.</p>
             )}
           </Empty>
         ) : (
@@ -450,28 +551,38 @@ export default function ProfileDetail() {
           <MediaViewer
             key={viewing.id}
             media={viewing}
-            footer={
+            actions={
               isOwner && (
-                <OwnerActions
-                  media={viewing}
-                  onDeleted={() => {
-                    setProfile(p => p && {
-                      ...p,
-                      media: p.media.filter(x => x.id !== viewing.id),
-                      counters: p.counters && {
-                        photos: p.counters.photos - (viewing.type === 'photo' ? 1 : 0),
-                        videos: p.counters.videos - (viewing.type === 'video' ? 1 : 0),
-                        private: p.counters.private - (viewing.paid ? 1 : 0),
-                      },
-                    })
-                    setViewing(null)
-                  }}
+                <OwnerMenu
+                  onEdit={() => navigate('/postar', { state: { media: viewing } })}
+                  onDelete={() => setDeleting(viewing)}
                 />
               )
             }
           />
         )}
       </Modal>
+
+      {deleting && (
+        <DeletePostModal
+          media={deleting}
+          onClose={() => setDeleting(null)}
+          onDeleted={() => {
+            const gone = deleting
+            setProfile(p => p && {
+              ...p,
+              media: p.media.filter(x => x.id !== gone.id),
+              counters: p.counters && {
+                photos: p.counters.photos - (gone.type === 'photo' ? 1 : 0),
+                videos: p.counters.videos - (gone.type === 'video' ? 1 : 0),
+                private: p.counters.private - (gone.paid ? 1 : 0),
+              },
+            })
+            setDeleting(null)
+            setViewing(null)
+          }}
+        />
+      )}
     </Wrap>
   )
 }

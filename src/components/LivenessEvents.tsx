@@ -59,7 +59,7 @@ export function LivenessEvents() {
           .then(me => {
             applyLevel(email, me.level ?? 1)
             // atualiza nome, @ e foto de perfil e capa (header, /conta e /conta/editar)
-            applyProfile(email, me.profile.replace(/^@/, ''), { name: me.name, avatar: mediaUrl(me.thumb), cover: mediaUrl(me.cover_photo) })
+            applyProfile(email, me.profile.replace(/^@/, ''), { name: me.name, avatar: mediaUrl(me.thumb), cover: mediaUrl(me.cover_photo), bio: me.description ?? undefined })
           })
           .catch(() => {})
       }

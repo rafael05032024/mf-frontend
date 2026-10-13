@@ -65,7 +65,7 @@ interface AppState {
   /** Aplica o `level` de /accounts/me: maior que 1 exibe a plataforma na visão de publicador */
   applyLevel: (email: string, level: number) => void
   /** Sincroniza o @ da conta local com o perfil retornado pela API no login */
-  applyProfile: (email: string, profile: string, extra?: { name?: string; avatar?: string; cover?: string; apiId?: number }) => void
+  applyProfile: (email: string, profile: string, extra?: { name?: string; avatar?: string; cover?: string; apiId?: number; bio?: string }) => void
 }
 
 const AppContext = createContext<AppState | null>(null)
@@ -216,7 +216,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setAccounts(prev =>
       prev.map(a => {
         if (a.email.toLowerCase() !== id) return a
-        const creator = a.creator && extra ? { ...a.creator, avatar: extra.avatar ?? '', cover: extra.cover ?? a.creator.cover } : a.creator
+        const creator = a.creator && extra ? { ...a.creator, avatar: extra.avatar ?? '', cover: extra.cover ?? a.creator.cover, bio: extra.bio ?? a.creator.bio } : a.creator
         return { ...a, handle, name: extra?.name || a.name, apiId: extra?.apiId ?? a.apiId, creator }
       }),
     )
