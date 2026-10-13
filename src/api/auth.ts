@@ -52,6 +52,8 @@ export interface Me {
   plan_value?: number | null
   /** Nível da conta: 1 = usuário comum; maior que 1 = publicador de conteúdo */
   level?: number
+  /** Perfil verificado: define se o selo é exibido */
+  verified?: boolean
 }
 
 export function getMe() {

@@ -4,6 +4,8 @@ export const theme = {
     primary: '#00AFF0',
     primaryHover: '#0098D1',
     primarySoft: '#E6F7FE',
+    primarySoftHover: '#D3F0FC', // tom de apoio para hover/press de superfícies suaves
+    primaryBorder: '#A7DFF6', // azul dessaturado para bordas em repouso (botões outline)
     primaryText: '#0079A8', // azul com contraste 4.5:1 para textos/links sobre branco
     white: '#FFFFFF',
     black: '#000000',

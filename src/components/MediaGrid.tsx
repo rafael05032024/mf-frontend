@@ -8,9 +8,11 @@ const Grid = styled.ul`
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 3px;
-  ${mq.md} { gap: 8px; }
+  /* mobile: 2 colunas (tiles de ~160px); telas maiores cabem mais por linha */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  ${mq.sm} { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  ${mq.md} { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 `
 
 const Tile = styled.button<{ $locked: boolean }>`
@@ -22,8 +24,7 @@ const Tile = styled.button<{ $locked: boolean }>`
   border: 0;
   overflow: hidden;
   background: ${({ theme }) => theme.colors.light};
-  border-radius: 4px;
-  ${mq.md} { border-radius: ${({ theme }) => theme.radius.sm}; }
+  border-radius: ${({ theme }) => theme.radius.sm};
   img, video {
     width: 100%;
     height: 100%;
@@ -43,25 +44,25 @@ const Overlay = styled.span`
   justify-content: center;
   gap: 4px;
   color: ${({ theme }) => theme.colors.white};
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-shadow: 0 1px 4px rgba(0,0,0,.4);
   svg { filter: drop-shadow(0 1px 3px rgba(0,0,0,.4)); }
-  small { display: none; ${mq.md} { display: block; font-size: 12px; } }
+  small { font-size: 12px; }
 `
 
 const Badge = styled.span`
   position: absolute;
-  right: 4px;
-  bottom: 4px;
+  right: 6px;
+  bottom: 6px;
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 2px 6px;
+  padding: 3px 7px;
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.6);
   color: ${({ theme }) => theme.colors.white};
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 `
 
@@ -69,8 +70,8 @@ const PlayButton = styled.span`
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
@@ -78,7 +79,6 @@ const PlayButton = styled.span`
   background: rgba(0, 0, 0, 0.45);
   color: ${({ theme }) => theme.colors.white};
   svg { margin-left: 2px; }
-  ${mq.md} { width: 44px; height: 44px; }
 `
 
 interface Props {
@@ -103,13 +103,13 @@ export function MediaGrid({ media, isLocked, onOpen }: Props) {
               )}
               {locked && (
                 <Overlay>
-                  <Lock size={22} aria-hidden />
+                  <Lock size={26} aria-hidden />
                   <small>Assinantes</small>
                 </Overlay>
               )}
               {m.type === 'video' && !locked && (
                 <PlayButton aria-hidden>
-                  <Play size={18} fill="currentColor" strokeWidth={0} />
+                  <Play size={20} fill="currentColor" strokeWidth={0} />
                 </PlayButton>
               )}
               {m.type === 'video' && m.duration && <Badge aria-hidden>{m.duration}</Badge>}

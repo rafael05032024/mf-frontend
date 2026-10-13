@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Headset, Send, X } from 'lucide-react'
 import styled, { keyframes } from 'styled-components'
 import { eventName, getMe, listMessages, markMessagesRead, sendMessage, subscribeEvents, type ApiMessage } from '../api'
-import { useApp } from '../store/AppContext'
+import { supportUnreadKey, useApp } from '../store/AppContext'
+import { load as loadStored, save } from '../store/storage'
 import { mq } from '../styles/theme'
 
 interface Msg {
@@ -135,6 +136,7 @@ const Bubble = styled.div<{ $mine: boolean }>`
   font-size: 14px;
   line-height: 1.4;
   overflow-wrap: anywhere;
+  .text { white-space: pre-wrap; }
   small { display: block; margin-top: 4px; font-size: 11px; opacity: 0.7; text-align: right; }
 `
 
@@ -192,9 +194,15 @@ export function SupportChat() {
   useEffect(() => {
     if (open) {
       setUnread(0)
+      if (email) save(supportUnreadKey(email), false)
       load()
     }
-  }, [open, load])
+  }, [open, load, email])
+
+  // usuário recém-cadastrado: chat de suporte com mensagem não lida
+  useEffect(() => {
+    if (email && !openRef.current && loadStored<boolean>(supportUnreadKey(email), false)) setUnread(1)
+  }, [email])
 
   // nova mensagem recebida pelo WebSocket
   useEffect(() => {
@@ -254,7 +262,7 @@ export function SupportChat() {
           <List>
             {msgs.map((m) => (
               <Bubble key={m.id} $mine={m.from === 'user'}>
-                {m.text}
+                <span className="text">{m.text.split(/\\n|\n/).map(l => l.trim()).join('\n')}</span>
                 <small>{m.time}</small>
               </Bubble>
             ))}

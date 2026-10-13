@@ -1,3 +1,4 @@
+import { registerFlow } from '../utils/registerFlow'
 import { Suspense, useEffect, useState } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useApp } from '../store/AppContext'
@@ -62,6 +63,6 @@ function AuthTransition() {
 
 export function GuestOnly() {
   const { user } = useApp()
-  if (user) return <Navigate to="/" replace />
+  if (user && !registerFlow.active) return <Navigate to="/" replace />
   return <AuthTransition />
 }

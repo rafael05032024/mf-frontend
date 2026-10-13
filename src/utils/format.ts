@@ -12,6 +12,14 @@ export const formatBRL = (v: number) => brlFmt.format(v)
 export const formatFt = (v: number) => `${numFmt.format(v)} ft`
 export const formatNumber = (v: number) => numFmt.format(v)
 
+/** Tamanho de arquivo legível: 52,4 MB, 834 KB… */
+export const formatBytes = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`
+  const mb = bytes / 1024 / 1024
+  if (mb < 1) return `${Math.round(bytes / 1024)} KB`
+  return `${mb.toFixed(mb < 10 ? 1 : 0).replace('.', ',')} MB`
+}
+
 export const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
@@ -77,7 +85,7 @@ export const addDays = (d: Date, days: number) => new Date(d.getTime() + days * 
 /** Converte o nome de ícone lucide (PascalCase ou kebab-case) para kebab-case */
 export const toIconName = (name: string) => name.replace(/([a-z])([A-Z0-9])/g, '$1-$2').toLowerCase()
 
-/** Cores do ícone da notificação por tipo: 1 = verde, 2 = vermelho, 3 = amarelo */
+/** Cores do ícone da notificação por tipo: 1 = verde, 2 = vermelho, 3 = amarelo, 4 = azul */
 export const notificationColors = (
   type: number | undefined,
   c: { success: string; successSoft: string; danger: string; dangerSoft: string; warning: string; warningSoft: string; primaryText: string; primarySoft: string },
@@ -88,4 +96,6 @@ export const notificationColors = (
       ? { color: c.danger, background: c.dangerSoft }
       : type === 3
         ? { color: c.warning, background: c.warningSoft }
-        : { color: c.primaryText, background: c.primarySoft }
+        : type === 4
+          ? { color: c.primaryText, background: c.primarySoft }
+          : { color: c.primaryText, background: c.primarySoft }

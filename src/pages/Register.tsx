@@ -14,6 +14,7 @@ import { useToast } from '../components/Toast'
 import { Alert, Button, Input, Muted, Stack, Title } from '../components/ui'
 import { useApp } from '../store/AppContext'
 import { useSignIn } from '../store/useSignIn'
+import { registerFlow } from '../utils/registerFlow'
 import { HANDLE_RE, isEmail, normalizeHandle } from '../utils/format'
 import { AuthShell } from './AuthShell'
 
@@ -121,9 +122,11 @@ export default function Register() {
       setLoading(false)
       return toast({ title: err instanceof Error ? err.message : 'Não foi possível criar a conta.', tone: 'danger' })
     }
+    registerFlow.active = true // a sessão abre já no login: mantém a tela até o fim do timer
     // login imediato: gera o token (/api/login + /accounts/me) e abre a sessão local
     const session = await signIn(form.email.trim(), form.password)
     if (!session.ok) {
+      registerFlow.active = false
       setLoading(false)
       toast({ title: `Conta criada, mas não foi possível entrar: ${session.error}`, tone: 'danger' })
       return navigate('/login', { replace: true })
@@ -132,6 +135,7 @@ export default function Register() {
     setRedirecting(true)
     const to = (location.state as { from?: string } | null)?.from ?? '/'
     timer.current = window.setTimeout(() => {
+      registerFlow.active = false
       navigate(to, { replace: true })
     }, 5000)
   }

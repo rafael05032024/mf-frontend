@@ -17,7 +17,7 @@ export const Button = styled.button<{ $variant?: Variant; $block?: boolean; $siz
   letter-spacing: 0.01em;
   width: ${({ $block }) => ($block ? '100%' : 'auto')};
   white-space: nowrap;
-  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.1s ease;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.1s ease;
   &:active:not(:disabled) { transform: scale(0.98); }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -34,14 +34,30 @@ export const Button = styled.button<{ $variant?: Variant; $block?: boolean; $siz
         return css`
           background: ${c.primarySoft};
           color: ${c.primaryText};
-          &:hover:not(:disabled) { background: #d3f0fc; }
+          &:hover:not(:disabled) { background: ${c.primarySoftHover}; }
         `
       case 'outline':
         return css`
           background: ${c.white};
           color: ${c.primaryText};
-          border-color: ${c.primary};
-          &:hover:not(:disabled) { background: ${c.primarySoft}; }
+          border-color: ${c.primaryBorder};
+          box-shadow: ${theme.shadow.sm};
+          &:hover:not(:disabled) {
+            background: ${c.primarySoft};
+            border-color: ${c.primary};
+          }
+          &:active:not(:disabled) {
+            background: ${c.primarySoftHover};
+            border-color: ${c.primaryHover};
+            box-shadow: none;
+          }
+          &:disabled {
+            opacity: 1;
+            background: ${c.light};
+            border-color: ${c.border};
+            color: ${c.grayText};
+            box-shadow: none;
+          }
         `
       case 'danger':
         return css`

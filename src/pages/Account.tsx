@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { BarChart3, CreditCard, Eye, Bell, Hourglass, ListChecks, LogOut, Settings, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { getActiveSubscriptionsCount, getBalance } from '../api'
+import { getActiveSubscriptionsCount, getBalance, getMe } from '../api'
 import { ActionItem, List } from '../components/ActionList'
 import { Avatar } from '../components/Avatar'
 import { VerifiedBadge } from '../components/icons'
@@ -58,6 +58,7 @@ export default function Account() {
   const isCreator = user.creatorStatus === 'verified'
   const [balance, setBalance] = useState<number | null>(null)
   const [balanceError, setBalanceError] = useState(false)
+  const [verified, setVerified] = useState(false)
   const [activeSubs, setActiveSubs] = useState<number | null>(null)
 
   useEffect(() => {
@@ -65,6 +66,9 @@ export default function Account() {
     getBalance()
       .then(b => active && setBalance(b))
       .catch(() => active && setBalanceError(true))
+    getMe()
+      .then(me => active && setVerified(!!me.verified))
+      .catch(() => {})
     getActiveSubscriptionsCount()
       .then(n => active && setActiveSubs(n))
       .catch(() => {})
@@ -79,7 +83,7 @@ export default function Account() {
         <Head>
           <Avatar name={user.name} src={isCreator ? user.creator?.avatar : undefined} size={96} />
           <h1>
-            {user.name} {isCreator && <VerifiedBadge size={20} />}
+            {user.name} {verified && <VerifiedBadge size={20} />}
           </h1>
           <Muted>@{user.handle}</Muted>
         </Head>

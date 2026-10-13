@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { BadgeDollarSign, Image, KeyRound, ShieldCheck, PauseCircle, Share2, Trash2, UserPen } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import { getMe, mediaUrl, uploadPhoto } from '../api'
 import { ActionItem, List } from '../components/ActionList'
 import { Avatar } from '../components/Avatar'
 import { ImageUpload } from '../components/ImageUpload'
@@ -31,7 +32,15 @@ export default function EditProfile() {
   const isCreator = user.creatorStatus === 'verified' && !!user.creator
   const [confirm, setConfirm] = useState<'pause' | 'delete' | null>(null)
 
-  const onAvatar = (avatar: string) => {
+  const onAvatar = async (avatar: string) => {
+    // a foto precisa ir para a API, senão o perfil público continua exibindo a antiga
+    try {
+      await uploadPhoto(avatar)
+      const me = await getMe().catch(() => undefined)
+      avatar = mediaUrl(me?.thumb) ?? avatar
+    } catch (err) {
+      return toast({ title: err instanceof Error ? err.message : 'Não foi possível atualizar a foto.', tone: 'danger' })
+    }
     const r = updateProfile({ avatar })
     toast({ title: r.ok ? 'Foto de perfil atualizada' : r.error, tone: r.ok ? 'success' : 'info' })
   }

@@ -47,8 +47,12 @@ const Slide = styled(Link)`
   overflow: hidden;
   color: ${({ theme }) => theme.colors.white};
   background: ${({ theme }) => theme.colors.dark};
-  > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
-  &:hover > img { transform: scale(1.04); }
+  > img { position: absolute; inset: 0; width: 100%; height: 100%; transition: transform 0.4s ease; }
+  /* a capa é recortada em 3:1: num slide retrato ela aparece inteira (contain), acima do
+     gradiente, sobre uma cópia desfocada que preenche o resto do quadro */
+  > img.fill { object-fit: cover; transform: scale(1.15); filter: blur(22px) saturate(1.15) brightness(0.85); }
+  > img.shot { object-fit: contain; object-position: 50% 38%; }
+  &:hover > img.shot { transform: scale(1.04); }
   &::after {
     content: '';
     position: absolute;
@@ -143,7 +147,12 @@ export function FeaturedCarousel({ profiles }: { profiles: ProfileSummary[] }) {
         {profiles.map((p, i) => (
           <li key={p.handle} aria-roledescription="slide" aria-label={`${i + 1} de ${profiles.length}`}>
             <Slide to={`/perfil/${p.handle}`}>
-              {(p.cover ?? p.avatar) && <img src={p.cover ?? p.avatar} alt="" loading="lazy" />}
+              {(p.cover ?? p.avatar) && (
+                <>
+                  <img className="fill" src={p.cover ?? p.avatar} alt="" aria-hidden loading="lazy" />
+                  <img className="shot" src={p.cover ?? p.avatar} alt="" loading="lazy" />
+                </>
+              )}
               <Info>
                 <Avatar name={p.handle} src={p.avatar} size={44} />
                 <div>

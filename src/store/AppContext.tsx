@@ -17,7 +17,11 @@ const NOTIFY_EVENTS = new Set([
   'walleted_recharged',
   'new_subscriber',
   'new_subscription',
+  'new_notification',
 ])
+
+/** Chave do aviso de mensagem não lida no chat de suporte, criada no cadastro */
+export const supportUnreadKey = (email: string) => `myfoot:support-unread:${email.trim().toLowerCase()}`
 
 type Result = { ok: true } | { ok: false; error: string }
 
@@ -198,12 +202,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       posts: [],
       subscriptions: [],
       transactions: [],
-      notifications: [
-        { id: uid(), message: 'Bem-vindo(a) ao My Foot! Recarregue sua carteira para assinar perfis.', date: now, read: false, link: '/conta/carteira' },
-      ],
+      notifications: [],
     }
     setAccounts(prev => [...prev, u])
     setSessionId(u.id)
+    save(supportUnreadKey(email), true) // novo usuário vê o chat de suporte com mensagem não lida
     return { ok: true }
   }
 

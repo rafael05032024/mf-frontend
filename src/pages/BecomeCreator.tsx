@@ -218,7 +218,7 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
     }
     if (s === 'price') await once('price', form.price, () => createPlan(parseBRL(form.price)))
     // o QRCode é gerado ao entrar na etapa de verificação
-    if (STEPS[STEPS.findIndex(x => x.id === s) + 1]?.id === 'verify') await loadVerification()
+    if (!personalEmpty && STEPS[STEPS.findIndex(x => x.id === s) + 1]?.id === 'verify') await loadVerification()
   }
 
   const loadVerification = async () => {
@@ -226,6 +226,13 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
   }
 
   const next = async () => {
+    // etapa de dados pessoais sem nenhum dado: segue adiante sem validar nem salvar
+    if (stepId === 'personal' && personalEmpty) {
+      setErrors({})
+      setStep(s => s + 1)
+      window.scrollTo({ top: 0 })
+      return
+    }
     const er = validate(stepId)
     setErrors(er)
     if (Object.keys(er).length) return
@@ -240,6 +247,22 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
     }
     setStep(s => s + 1)
     window.scrollTo({ top: 0 })
+  }
+
+  /** Sem dados pessoais não há verificação: salva o valor da assinatura e conclui o pré-cadastro */
+  const finishWithoutVerify = async () => {
+    const er = validate(stepId)
+    setErrors(er)
+    if (Object.keys(er).length) return
+    setSaving(true)
+    try {
+      await saveStep(stepId)
+    } catch (e) {
+      toast({ title: 'Não é possível prosseguir', message: e instanceof ApiError ? e.message : 'Tente novamente.', tone: 'danger' })
+      setSaving(false)
+      return
+    }
+    await skipVerification()
   }
 
   const skipVerification = async () => {
@@ -287,6 +310,7 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
 
   const stepId = STEPS[step].id
   const isLast = step === STEPS.length - 1
+  const personalEmpty = !form.cpf && !form.legalName.trim() && !form.birthDate
   const priceValid = !validateBRL(form.price, true)
 
   // depois de todos os hooks (um return antes deles quebra a renderização)
@@ -341,7 +365,17 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
 
           {stepId === 'profile' && (
             <>
-              <ImageUpload hideLabel label="Foto de perfil" shape="avatar" size={180} center crop value={form.avatar} onChange={v => set('avatar', v)} error={errors.avatar} hint="Enviar" />
+              <ImageUpload
+                layout="panel"
+                label="Foto de perfil"
+                description="Use uma foto nítida do seu rosto, de frente e bem iluminada. Você ajusta o enquadramento antes de confirmar."
+                shape="avatar"
+                size={132}
+                crop
+                value={form.avatar}
+                onChange={v => set('avatar', v)}
+                error={errors.avatar}
+              />
               <Field label="Nome do perfil" error={errors.displayName} hint="Nome exibido para os fãs">
                 <InputGroup leftIcon={<User size={18} />}>
                   <Input value={form.displayName} onChange={e => set('displayName', e.target.value)} />
@@ -424,7 +458,8 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
           )}
 
           <Nav>
-            {!isLast && <Button onClick={next} $block disabled={saving}>{saving ? 'Salvando…' : 'Próximo'}</Button>}
+            {stepId === 'price' && personalEmpty && !verifyOnly && <Button $variant="outline" onClick={finishWithoutVerify} $block disabled={saving}>{saving ? 'Aguarde…' : 'Concluir sem verificar'}</Button>}
+            {!isLast && !(stepId === 'price' && personalEmpty && !verifyOnly) && <Button $variant={stepId === 'personal' && personalEmpty ? 'outline' : 'primary'} onClick={next} $block disabled={saving}>{saving ? 'Salvando…' : stepId === 'personal' && personalEmpty ? 'Continuar sem preencher' : 'Próximo'}</Button>}
             {isLast && !verifyOnly && <Button $variant="outline" $block onClick={skipVerification} disabled={saving}>{saving ? 'Aguarde…' : 'Prosseguir sem verificação'}</Button>}
           </Nav>
         </Stack>
