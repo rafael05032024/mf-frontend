@@ -7,3 +7,11 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+interface RuntimeEnv {
+  API_URL?: string
+}
+
+interface Window {
+  __ENV__?: RuntimeEnv
+}

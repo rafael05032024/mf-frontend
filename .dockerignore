@@ -1,0 +1,11 @@
+.git
+.gitignore
+.claude
+node_modules
+dist
+Dockerfile
+.dockerignore
+docker-compose.yml
+*.md
+tsconfig.tsbuildinfo
+emails
