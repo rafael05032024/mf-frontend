@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { ArrowDownLeft, ArrowUpRight, Banknote, Plus, Receipt } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Banknote, BanknoteX, Info, Plus, Receipt } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { getWallet, type Wallet as WalletData } from '../api'
+import { getWallet, type TransactionType, type Wallet as WalletData } from '../api'
 import { PageHeader } from '../components/PageHeader'
 import { Button, Card, Muted, NarrowContainer, SectionTitle, Stack } from '../components/ui'
 import { useAuthedUser } from '../store/AppContext'
@@ -42,23 +42,57 @@ const TxList = styled.ul`
   small { font-size: 13px; color: ${({ theme }) => theme.colors.grayText}; }
 `
 
-const TxIcon = styled.span<{ $in: boolean }>`
+type TxTone = 'in' | 'out' | 'info' | 'failed'
+
+const TxIcon = styled.span<{ $tone: TxTone }>`
   flex-shrink: 0;
   display: grid;
   place-items: center;
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: ${({ $in, theme }) => ($in ? theme.colors.successSoft : theme.colors.light)};
-  color: ${({ $in, theme }) => ($in ? theme.colors.success : theme.colors.dark)};
+  background: ${({ $tone, theme }) => ({
+    in: theme.colors.successSoft,
+    out: theme.colors.dangerSoft,
+    info: theme.colors.primarySoft,
+    failed: theme.colors.dangerSoft,
+  }[$tone])};
+  color: ${({ $tone, theme }) => ({
+    in: theme.colors.success,
+    out: theme.colors.danger,
+    info: theme.colors.primaryText,
+    failed: theme.colors.danger,
+  }[$tone])};
 `
 
-const Amount = styled.span<{ $in: boolean }>`
+const Amount = styled.span<{ $tone: TxTone }>`
   font-weight: 700;
   font-size: 15px;
   white-space: nowrap;
-  color: ${({ $in, theme }) => ($in ? theme.colors.success : theme.colors.black)};
+  color: ${({ $tone, theme }) => ({
+    in: theme.colors.success,
+    out: theme.colors.danger,
+    info: theme.colors.primaryText,
+    failed: theme.colors.danger,
+  }[$tone])};
 `
+
+const TX_TONE: Record<TransactionType, TxTone> = { 1: 'in', 2: 'out', 3: 'info', 4: 'failed' }
+
+const TX_ICON: Record<TxTone, typeof Info> = {
+  in: ArrowDownLeft,
+  out: ArrowUpRight,
+  info: Info,
+  failed: BanknoteX,
+}
+
+/** Prefixo e rótulo acessível do valor; types 3 e 4 não movimentam saldo */
+const TX_SIGN: Record<TxTone, { prefix: string; label: string }> = {
+  in: { prefix: '+ ', label: 'entrada de' },
+  out: { prefix: '− ', label: 'saída de' },
+  info: { prefix: '', label: 'valor de' },
+  failed: { prefix: '', label: 'valor não efetivado de' },
+}
 
 const Empty = styled.div`
   text-align: center;
@@ -115,18 +149,20 @@ export default function Wallet() {
           ) : (
             <TxList>
               {wallet.transactions.map(t => {
-                const incoming = t.incoming
+                const tone = TX_TONE[t.type] ?? 'out'
+                const Icon = TX_ICON[tone]
+                const sign = TX_SIGN[tone]
                 return (
                   <li key={t.id}>
-                    <TxIcon $in={incoming} aria-hidden>
-                      {incoming ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
+                    <TxIcon $tone={tone} aria-hidden>
+                      <Icon size={20} />
                     </TxIcon>
                     <div>
                       <strong>{t.description}</strong>
                     </div>
-                    <Amount $in={incoming}>
-                      <span className="sr-only">{incoming ? 'entrada de' : 'saída de'}</span>
-                      {incoming ? '+' : '−'} {formatFt(t.amountFt)}
+                    <Amount $tone={tone}>
+                      <span className="sr-only">{sign.label}</span>
+                      {sign.prefix}{formatFt(t.amountFt)}
                     </Amount>
                   </li>
                 )

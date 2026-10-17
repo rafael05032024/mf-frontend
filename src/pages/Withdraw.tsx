@@ -1,13 +1,13 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Coins, Key } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
+import { createWithdrawal, getBalance } from '../api'
 import { Field } from '../components/Field'
 import { InputGroup } from '../components/InputGroup'
 import { PageHeader } from '../components/PageHeader'
 import { useToast } from '../components/Toast'
 import { Button, Card, Input, Muted, NarrowContainer, Select, Stack } from '../components/ui'
-import { useApp, useAuthedUser } from '../store/AppContext'
 import { formatBRL, formatFt, ftToBrl } from '../utils/format'
 
 const Available = styled.div`
@@ -19,32 +19,45 @@ const Available = styled.div`
   button { border: 0; background: none; color: ${({ theme }) => theme.colors.primaryText}; font-weight: 700; min-height: 44px; }
 `
 
-const MIN_FT = 450 // R$ 15,00
-
 export default function Withdraw() {
-  const user = useAuthedUser()
-  const { withdraw } = useApp()
   const toast = useToast()
   const navigate = useNavigate()
   const [amount, setAmount] = useState('')
   const [keyType, setKeyType] = useState('cpf')
   const [pixKey, setPixKey] = useState('')
   const [errors, setErrors] = useState<{ amount?: string; pixKey?: string }>({})
+  const [balance, setBalance] = useState<number | null>(null)
+  const [balanceError, setBalanceError] = useState(false)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    getBalance()
+      .then(b => active && setBalance(b))
+      .catch(() => active && setBalanceError(true))
+    return () => { active = false }
+  }, [])
 
   const ft = Math.floor(Number(amount) || 0)
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault()
     const er: typeof errors = {}
-    if (ft < MIN_FT) er.amount = `O resgate mínimo é ${formatFt(MIN_FT)}.`
-    else if (ft > user.balanceFt) er.amount = 'Valor maior que o saldo disponível.'
+    if (ft <= 0) er.amount = 'Informe um valor para resgate.'
+    else if (balance !== null && ft > balance) er.amount = 'Valor maior que o saldo disponível.'
     if (pixKey.trim().length < 5) er.pixKey = 'Informe uma chave PIX válida.'
     setErrors(er)
     if (Object.keys(er).length) return
-    const r = withdraw(ft)
-    if (!r.ok) return setErrors({ amount: r.error })
-    toast({ title: 'Resgate solicitado', message: `${formatBRL(ftToBrl(ft))} serão enviados para sua chave PIX em até 1 dia útil.`, tone: 'success' })
-    navigate('/conta/carteira')
+    setLoading(true)
+    try {
+      await createWithdrawal(ft, pixKey.trim())
+      toast({ title: 'Resgate solicitado', message: 'Sua solicitação está sob análise e será atendida em até 24 horas.', tone: 'success' })
+      navigate('/conta/carteira')
+    } catch (e) {
+      setErrors({ amount: e instanceof Error ? e.message : 'Não foi possível solicitar o resgate.' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -56,14 +69,14 @@ export default function Withdraw() {
             <Available>
               <div>
                 <Muted>Disponível para resgate</Muted>
-                <strong>{formatFt(user.balanceFt)}</strong>
+                <strong>{balance !== null ? formatFt(balance) : balanceError ? 'Indisponível' : '...'}</strong>
               </div>
-              <button type="button" onClick={() => setAmount(String(user.balanceFt))}>Resgatar tudo</button>
+              <button type="button" disabled={balance === null} onClick={() => setAmount(String(balance))}>Resgatar tudo</button>
             </Available>
           </Card>
           <Card>
             <Stack>
-              <Field label="Valor em FootCoins" error={errors.amount} hint={ft > 0 ? `Você receberá ${formatBRL(ftToBrl(ft))}` : `Mínimo de ${formatFt(MIN_FT)}`}>
+              <Field label="Valor em FootCoins" error={errors.amount} hint={ft > 0 ? `Você receberá ${formatBRL(ftToBrl(ft))}` : undefined}>
                 <InputGroup leftIcon={<Coins size={18} />}>
                   <Input inputMode="numeric" value={amount} onChange={e => setAmount(e.target.value.replace(/\D/g, ''))} placeholder="0" />
                 </InputGroup>
@@ -83,7 +96,7 @@ export default function Withdraw() {
               </Field>
             </Stack>
           </Card>
-          <Button type="submit" $size="lg" $block>Solicitar resgate</Button>
+          <Button type="submit" $size="lg" $block disabled={loading}>{loading ? 'Solicitando...' : 'Solicitar resgate'}</Button>
         </Stack>
       </form>
     </NarrowContainer>
