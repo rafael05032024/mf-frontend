@@ -7,6 +7,7 @@ import { PasswordInput } from '../components/PasswordInput'
 import { useToast } from '../components/Toast'
 import { Button, Input, Muted, Stack, Title } from '../components/ui'
 import { useSignIn } from '../store/useSignIn'
+import { isEmail } from '../utils/format'
 import { AuthShell } from './AuthShell'
 
 export default function Login() {
@@ -14,16 +15,17 @@ export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   const toast = useToast()
-  const [identifier, setIdentifier] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (loading) return
-    if (!identifier.trim() || !password) return toast({ title: 'Preencha e-mail/perfil e senha.', tone: 'danger' })
+    if (!email.trim() || !password) return toast({ title: 'Preencha e-mail e senha.', tone: 'danger' })
+    if (!isEmail(email)) return toast({ title: 'Informe um e-mail válido.', tone: 'danger' })
     setLoading(true)
-    const r = await signIn(identifier, password)
+    const r = await signIn(email, password)
     setLoading(false)
     if (!r.ok) return toast({ title: r.error, tone: 'danger' })
     navigate((location.state as { from?: string } | null)?.from ?? '/', { replace: true })
@@ -37,9 +39,9 @@ export default function Login() {
             <Title>Entrar</Title>
             <Muted>Que bom te ver de novo!</Muted>
           </div>
-          <Field label="E-mail ou perfil">
+          <Field label="E-mail">
             <InputGroup leftIcon={<Mail size={18} />}>
-              <Input value={identifier} onChange={e => setIdentifier(e.target.value)} autoComplete="username" placeholder="voce@email.com ou @perfil" />
+              <Input type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="username" placeholder="voce@email.com" />
             </InputGroup>
           </Field>
           <Field label="Senha">

@@ -2,7 +2,7 @@ import { DynamicIcon, type IconName } from 'lucide-react/dynamic'
 import { useEffect, useRef, useState } from 'react'
 import { Bell, ImagePlus } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
-import styled from 'styled-components'
+import styled, { keyframes } from 'styled-components'
 import { useApp } from '../store/AppContext'
 import { mq } from '../styles/theme'
 import { notificationColors, relativeTime, toIconName } from '../utils/format'
@@ -65,6 +65,21 @@ const PostButton = styled.button`
   ${mq.sm} { span { display: inline; } }
 `
 
+const ring = keyframes`
+  0%, 100% { transform: rotate(0); }
+  10% { transform: rotate(14deg); }
+  20% { transform: rotate(-12deg); }
+  30% { transform: rotate(10deg); }
+  40% { transform: rotate(-8deg); }
+  50% { transform: rotate(4deg); }
+  60% { transform: rotate(0); }
+`
+
+const RingingBell = styled(Bell)<{ $ring: boolean }>`
+  transform-origin: top center;
+  animation: ${({ $ring }) => ($ring ? ring : 'none')} 2.2s ease-in-out infinite;
+`
+
 const Dot = styled.span`
   position: absolute;
   top: 2px;
@@ -107,7 +122,7 @@ const NotifItem = styled.button<{ $unread: boolean }>`
   text-align: left;
   padding: 12px 16px;
   border: 0;
-  background: ${({ $unread, theme }) => ($unread ? theme.colors.primarySoft : theme.colors.white)};
+  background: ${({ theme }) => theme.colors.white};
   font-size: 14px;
   &:hover { background: ${({ theme }) => theme.colors.light}; }
   small { display: block; color: ${({ theme }) => theme.colors.grayText}; margin-top: 2px; font-size: 12px; }
@@ -206,7 +221,7 @@ export function Header() {
 
         <div ref={wrapRef} style={{ position: 'relative' }}>
           <IconButton onClick={toggle} aria-label={`Notificações${unread ? `, ${unread} não lidas` : ''}`} aria-expanded={open}>
-            <Bell size={22} />
+            <RingingBell size={22} $ring={unread > 0} />
             {unread > 0 && <Dot aria-hidden="true">{unread > 9 ? '9+' : unread}</Dot>}
           </IconButton>
           {open && (

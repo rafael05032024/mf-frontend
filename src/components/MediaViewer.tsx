@@ -154,7 +154,16 @@ export function MediaViewer({ media, actions }: Props) {
 
   const renderMedia = (full = false) =>
     isVideo ? (
-      <video src={media.url} controls autoPlay playsInline />
+      <video
+        src={media.url}
+        controls
+        autoPlay
+        playsInline
+        // sem download nem menu de contexto: a mídia é exclusiva de quem assina
+        controlsList="nodownload"
+        disablePictureInPicture
+        onContextMenu={e => e.preventDefault()}
+      />
     ) : full ? (
       <img
         src={media.url}

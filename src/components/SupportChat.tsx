@@ -20,7 +20,12 @@ const toMsg = (m: ApiMessage): Msg => ({ id: m.id, from: m.mine ? 'user' : 'agen
 
 const pop = keyframes`from { transform: translateY(12px) scale(.96); opacity: 0 } to { transform: none; opacity: 1 }`
 
-const Fab = styled.button`
+const pulse = keyframes`
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 175, 240, 0.55); }
+  50% { box-shadow: 0 0 0 10px rgba(0, 175, 240, 0); }
+`
+
+const Fab = styled.button<{ $unread?: boolean }>`
   position: fixed;
   right: 16px;
   bottom: 16px;
@@ -34,9 +39,10 @@ const Fab = styled.button`
   outline: none;
   display: grid;
   place-items: center;
-  box-shadow: ${({ theme }) => theme.shadow.md};
-  transition: background 0.15s, transform 0.15s;
-  &:hover { background: ${({ theme }) => theme.colors.primaryHover}; transform: scale(1.05); }
+  box-shadow: 0 4px 10px rgba(0,0,0,.2), 0 2px 4px rgba(0,0,0,.15);
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+  animation: ${({ $unread }) => ($unread ? pulse : 'none')} 1.6s ease-in-out infinite;
+  &:hover { background: ${({ theme }) => theme.colors.primaryHover}; transform: scale(1.05); box-shadow: 0 6px 14px rgba(0,0,0,.24), 0 3px 6px rgba(0,0,0,.18); }
   ${mq.md} { right: 24px; bottom: 24px; }
 `
 
@@ -104,13 +110,17 @@ const Who = styled.div`
 `
 
 const Close = styled.button`
-  color: inherit;
+  color: ${({ theme }) => theme.colors.dark};
   display: grid;
   place-items: center;
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  &:hover { background: rgba(255, 255, 255, 0.2); }
+  background: rgba(255, 255, 255, 0.92);
+  border: none;
+  outline: none;
+  transition: background-color 0.15s ease;
+  &:hover { background: ${({ theme }) => theme.colors.white}; }
 `
 
 const List = styled.div`
@@ -274,7 +284,7 @@ export function SupportChat() {
           </Form>
         </Panel>
       )}
-      <Fab ref={fabRef} type="button" onClick={() => setOpen((o) => !o)} aria-label={open ? 'Fechar suporte' : 'Abrir suporte'}>
+      <Fab ref={fabRef} type="button" $unread={!open && unread > 0} onClick={() => setOpen((o) => !o)} aria-label={open ? 'Fechar suporte' : 'Abrir suporte'}>
         {open ? <X size={24} /> : <Headset size={24} />}
         {!open && unread > 0 && <Badge aria-label={`${unread} mensagens não lidas`}>{unread}</Badge>}
       </Fab>

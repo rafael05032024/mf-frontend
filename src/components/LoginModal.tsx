@@ -7,6 +7,7 @@ import { InputGroup } from './InputGroup'
 import { Modal } from './Modal'
 import { PasswordInput } from './PasswordInput'
 import { Alert, Button, Input, Muted, Stack, Title } from './ui'
+import { isEmail } from '../utils/format'
 
 interface Props {
   open: boolean
@@ -17,7 +18,7 @@ export function LoginModal({ open, onClose }: Props) {
   const signIn = useSignIn()
   const navigate = useNavigate()
   const location = useLocation()
-  const [identifier, setIdentifier] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -25,13 +26,14 @@ export function LoginModal({ open, onClose }: Props) {
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (loading) return
-    if (!identifier.trim() || !password) return setError('Preencha e-mail/perfil e senha.')
+    if (!email.trim() || !password) return setError('Preencha e-mail e senha.')
+    if (!isEmail(email)) return setError('Informe um e-mail válido.')
     setError('')
     setLoading(true)
-    const r = await signIn(identifier, password)
+    const r = await signIn(email, password)
     setLoading(false)
     if (!r.ok) return setError(r.error)
-    setIdentifier('')
+    setEmail('')
     setPassword('')
     setError('')
     onClose()
@@ -50,9 +52,9 @@ export function LoginModal({ open, onClose }: Props) {
               <AlertCircle size={18} /> {error}
             </Alert>
           )}
-          <Field label="E-mail ou perfil">
+          <Field label="E-mail">
             <InputGroup leftIcon={<Mail size={18} />}>
-              <Input value={identifier} onChange={e => setIdentifier(e.target.value)} autoComplete="username" placeholder="voce@email.com ou @perfil" />
+              <Input type="email" value={email} onChange={e => setEmail(e.target.value)} autoComplete="username" placeholder="voce@email.com" />
             </InputGroup>
           </Field>
           <Field label="Senha">

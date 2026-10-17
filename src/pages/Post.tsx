@@ -204,7 +204,7 @@ export default function Post() {
               {media ? (
                 <Preview>
                   {media.type === 'video' && !file
-                    ? <video src={media.url} controls />
+                    ? <video src={media.url} controls controlsList="nodownload" disablePictureInPicture onContextMenu={e => e.preventDefault()} />
                     : <img src={media.url} alt="Pré-visualização da mídia" />}
                   {media.type === 'video' && file && <span className="badge"><Play size={12} fill="currentColor" /> Vídeo · {media.duration}</span>}
                   <IconButton className="remove" onClick={reset} aria-label="Remover mídia">

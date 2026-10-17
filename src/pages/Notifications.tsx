@@ -111,7 +111,7 @@ export default function Notifications() {
           ))}
         </Cards>
       )}
-      <Modal open={!!selected} onClose={() => setSelected(null)} label={selected?.title ?? 'Notificação'} width={400}>
+      <Modal open={!!selected} onClose={() => setSelected(null)} label={selected?.title ?? 'Notificação'} width={560}>
         {selected && (
           <Detail>
             <Icon $type={selected.type} aria-hidden style={{ width: 64, height: 64 }}>

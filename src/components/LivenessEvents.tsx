@@ -5,6 +5,7 @@ import styled from 'styled-components'
 import { eventName, getMe, mediaUrl, subscribeEvents } from '../api'
 import { useApp } from '../store/AppContext'
 import { Modal } from './Modal'
+import { useToast } from './Toast'
 import { Button, Muted } from './ui'
 
 const Notice = styled.div<{ $tone: 'ok' | 'error' }>`
@@ -33,6 +34,7 @@ export function LivenessEvents() {
   const [result, setResult] = useState<'approved' | 'rejected' | null>(null)
   const email = user?.email
   const navigate = useNavigate()
+  const toast = useToast()
   const pathRef = useRef('')
   const location = useLocation()
   pathRef.current = location.pathname
@@ -48,9 +50,16 @@ export function LivenessEvents() {
 
   useEffect(() => {
     if (!email) return
-    return subscribeEvents(data => {
+    const timers = new Set<number>()
+    const unsubscribe = subscribeEvents(data => {
       const name = eventName(data)
-      if (name === 'liveness_request_rejected') setResult('rejected')
+      if (name === 'new_notification') {
+        const t = window.setTimeout(() => {
+          timers.delete(t)
+          toast({ title: 'Nova notificação', message: 'Você recebeu uma nova notificação.', tone: 'info' })
+        }, 8000)
+        timers.add(t)
+      } else if (name === 'liveness_request_rejected') setResult('rejected')
       else if (name === 'liveness_request_approved') {
         setResult('approved')
         if (pathRef.current === '/conta/criador' || pathRef.current === '/conta/editar/verificar') navigate('/', { replace: true })
@@ -64,7 +73,11 @@ export function LivenessEvents() {
           .catch(() => {})
       }
     })
-  }, [email, applyLevel, applyProfile, navigate])
+    return () => {
+      unsubscribe()
+      timers.forEach(t => window.clearTimeout(t))
+    }
+  }, [email, applyLevel, applyProfile, navigate, toast])
 
   return (
     <>

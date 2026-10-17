@@ -48,6 +48,7 @@ async function request<T>(path: string, { query, body, headers, ...init }: Reque
   try {
     res = await fetch(buildUrl(path, query), {
       ...init,
+      credentials: 'include',
       headers: {
         Accept: 'application/json',
         ...(body !== undefined && !isForm ? { 'Content-Type': 'application/json' } : {}),

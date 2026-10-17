@@ -4,6 +4,7 @@ import { CreatorOnly, GuestOnly, ProtectedLayout, PublicLayout } from './compone
 import { LivenessEvents } from './components/LivenessEvents'
 import { SessionExpiredModal } from './components/SessionExpiredModal'
 import { PageLoader } from './components/PageLoader'
+import { useDisableInspect } from './hooks/useDisableInspect'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -28,6 +29,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Post = lazy(() => import('./pages/Post'))
 
 export default function App() {
+  useDisableInspect()
   return (
     <BrowserRouter>
       <LivenessEvents />

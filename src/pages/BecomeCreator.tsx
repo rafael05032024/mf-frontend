@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AtSign, Calendar, Clock, Coins, CreditCard, ExternalLink, Globe, User } from 'lucide-react'
+import { AtSign, Calendar, Clock, Coins, CreditCard, ExternalLink, Globe, Info, Plus, User } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
@@ -41,6 +41,17 @@ const ReviewNotice = styled.div`
   svg { color: ${({ theme }) => theme.colors.primaryText}; }
 `
 
+const FeeNote = styled.p`
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: ${({ theme }) => theme.colors.primaryText};
+  svg { flex-shrink: 0; margin-top: 1px; }
+`
+
 const Progress = styled.div`
   margin-bottom: 16px;
   .meta { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: ${({ theme }) => theme.colors.grayText}; margin-bottom: 8px; }
@@ -68,6 +79,54 @@ const QRBox = styled.div`
   gap: 12px;
   text-align: center;
   .qr { padding: 16px; background: #fff; border-radius: ${({ theme }) => theme.radius.md}; border: 1px solid ${({ theme }) => theme.colors.border}; line-height: 0; }
+`
+
+const AvatarPicker = styled.div`
+  display: grid;
+  justify-items: center;
+  margin-bottom: 4px;
+
+  /* o selo "+" marca a ação sem roubar o clique do círculo */
+  .pick { position: relative; line-height: 0; }
+  .badge {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    pointer-events: none;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 3px solid ${({ theme }) => theme.colors.white};
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.white};
+    box-shadow: 0 4px 12px ${({ theme }) => theme.colors.primary}40;
+  }
+  /* a mensagem de erro fica sob o círculo: precisa recuperar a entrelinha */
+  .pick p { line-height: 1.4; text-align: center; }
+`
+
+const CoverPicker = styled.div`
+  /* o selo "+" marca a ação sem roubar o clique do recorte */
+  .pick { position: relative; display: grid; }
+  .badge {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    pointer-events: none;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 3px solid ${({ theme }) => theme.colors.white};
+    background: ${({ theme }) => theme.colors.primary};
+    color: ${({ theme }) => theme.colors.white};
+    box-shadow: 0 4px 12px ${({ theme }) => theme.colors.primary}40;
+  }
+  /* com a mensagem de erro sob o recorte, o selo sobe para não cobri-la */
+  .pick:has(p) .badge { bottom: 35px; }
 `
 
 const PriceSummary = styled.div`
@@ -365,17 +424,23 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
 
           {stepId === 'profile' && (
             <>
-              <ImageUpload
-                layout="panel"
-                label="Foto de perfil"
-                description="Use uma foto nítida do seu rosto, de frente e bem iluminada. Você ajusta o enquadramento antes de confirmar."
-                shape="avatar"
-                size={132}
-                crop
-                value={form.avatar}
-                onChange={v => set('avatar', v)}
-                error={errors.avatar}
-              />
+              <AvatarPicker>
+                <div className="pick">
+                  <ImageUpload
+                    hideLabel
+                    center
+                    label="Foto de perfil"
+                    hint=""
+                    shape="avatar"
+                    size={132}
+                    crop
+                    value={form.avatar}
+                    onChange={v => set('avatar', v)}
+                    error={errors.avatar}
+                  />
+                  {!form.avatar && <span className="badge" aria-hidden><Plus size={20} /></span>}
+                </div>
+              </AvatarPicker>
               <Field label="Nome do perfil" error={errors.displayName} hint="Nome exibido para os fãs">
                 <InputGroup leftIcon={<User size={18} />}>
                   <Input value={form.displayName} onChange={e => set('displayName', e.target.value)} />
@@ -391,7 +456,12 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
 
           {stepId === 'cover' && (
             <>
-              <ImageUpload label="Foto de capa" shape="cover" crop value={form.cover} onChange={v => set('cover', v)} error={errors.cover} hint="Enviar capa (proporção 3:1)" />
+              <CoverPicker>
+                <div className="pick">
+                  <ImageUpload label="Foto de capa" shape="cover" crop value={form.cover} onChange={v => set('cover', v)} error={errors.cover} hint="" />
+                  {!form.cover && <span className="badge" aria-hidden><Plus size={20} /></span>}
+                </div>
+              </CoverPicker>
               <Field label="Biografia" error={errors.bio} hint={`${form.bio.length}/500`}>
                 <EmojiTextarea
                   value={form.bio}
@@ -421,6 +491,10 @@ export default function BecomeCreator({ verifyOnly = false }: { verifyOnly?: boo
           {stepId === 'price' && (
             <>
               <AmountPicker label="Valor mensal da assinatura" value={form.price} onChange={v => set('price', v)} error={errors.price} presets={[15, 20, 30, 50, 100, 150]} whole />
+              <FeeNote>
+                <Info size={16} aria-hidden />
+                10% do valor de cada inscrição são direcionados à plataforma.
+              </FeeNote>
               <PriceSummary>
                 <span className="icon" aria-hidden><Coins size={22} /></span>
                 <span className="label">
